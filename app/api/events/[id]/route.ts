@@ -5,7 +5,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { id } = await params;
 
   try {
-    const events = await prisma.event.findUnique({
+    const event = await prisma.event.findUnique({
       where: { id },
       include: {
         created_by: {
@@ -27,7 +27,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       },
     });
 
-    return NextResponse.json(events);
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(event);
   } catch (error) {
     console.error("Error fetching event:", error);
     return NextResponse.json("Failed to fetch events", { status: 500 });

@@ -23,6 +23,7 @@ import {
   Globe,
   Circle,
   Router,
+  LogIn,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -147,6 +148,35 @@ function hasEventEnded(event: EventWithSpeakers): boolean {
   return now >= feedbackStartTime;
 }
 
+function getEventTemporalStatus(event: EventWithSpeakers): 'upcoming' | 'ongoing' | 'ended' {
+  const now = new Date();
+
+  const startDateTime = new Date(event.start_date);
+  const startTime = new Date(event.start_time);
+  startDateTime.setHours(startTime.getHours(), startTime.getMinutes(), startTime.getSeconds());
+
+  let endDateTime: Date;
+  if (event.end_date && event.end_time) {
+    endDateTime = new Date(event.end_date);
+    const endTime = new Date(event.end_time);
+    endDateTime.setHours(endTime.getHours(), endTime.getMinutes(), endTime.getSeconds());
+  } else if (event.end_date) {
+    endDateTime = new Date(event.end_date);
+    endDateTime.setHours(23, 59, 59, 999);
+  } else if (event.end_time) {
+    endDateTime = new Date(event.start_date);
+    const endTime = new Date(event.end_time);
+    endDateTime.setHours(endTime.getHours(), endTime.getMinutes(), endTime.getSeconds());
+  } else {
+    endDateTime = new Date(event.start_date);
+    endDateTime.setHours(23, 59, 59, 999);
+  }
+
+  if (now < startDateTime) return 'upcoming';
+  if (now > endDateTime) return 'ended';
+  return 'ongoing';
+}
+
 export default function Page() {
   const router = useRouter();
   const params = useParams();
@@ -192,20 +222,37 @@ export default function Page() {
   };
 
   if (error) {
+    const is404 = error?.response?.status === 404 || error?.status === 404;
     return (
       <div>
         <LandingHeader />
-        <ErrorState message="Failed to load event details. Please try again later." />
+        <ErrorState
+          message={
+            is404
+              ? "Event not found. It may have been removed or the link is invalid."
+              : "Failed to load event details. Please try again later."
+          }
+        />
         <LandingFooter />
       </div>
     );
   }
 
-  if (isLoading || !event) {
+  if (isLoading) {
     return (
       <div>
         <LandingHeader />
         <LoadingSkeleton />
+        <LandingFooter />
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div>
+        <LandingHeader />
+        <ErrorState message="Event not found. It may have been removed or the link is invalid." />
         <LandingFooter />
       </div>
     );
@@ -236,6 +283,27 @@ export default function Page() {
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
+
+  // Compute registration availability
+  const temporalStatus = getEventTemporalStatus(event);
+  const registrationStatus = (() => {
+    if (event.status.toLowerCase() === 'cancelled') {
+      return { available: false, reason: 'This event has been cancelled.' };
+    }
+    if (event.status.toLowerCase() === 'completed' || temporalStatus === 'ended') {
+      return { available: false, reason: 'This event has already ended.' };
+    }
+    if (!event.registration_required) {
+      return { available: false, reason: 'No registration required — open for all!' };
+    }
+    if (event.registration_limit && event.current_registration_count >= event.registration_limit) {
+      return { available: false, reason: 'Registration is full.' };
+    }
+    if (!user) {
+      return { available: false, reason: 'login_required' };
+    }
+    return { available: true, reason: '' };
+  })();
 
   return (
     <div>
@@ -610,14 +678,31 @@ export default function Page() {
                     </div>
 
                     <div className="space-y-4 mb-6 flex flex-col gap-0.5">
-                      <Button
-                        size="lg"
-                        className="w-full text-lg font-semibold h-12"
-                        onClick={() => setConfirmOpen(true)}
-                      >
-                        <Ticket className="mr-2 h-5 w-5" />
-                        Get Tickets
-                      </Button>
+                      {registrationStatus.available ? (
+                        <Button
+                          size="lg"
+                          className="w-full text-lg font-semibold h-12"
+                          onClick={() => setConfirmOpen(true)}
+                        >
+                          <Ticket className="mr-2 h-5 w-5" />
+                          Get Tickets
+                        </Button>
+                      ) : registrationStatus.reason === 'login_required' ? (
+                        <Button
+                          size="lg"
+                          className="w-full text-lg font-semibold h-12"
+                          onClick={() => router.push('/login')}
+                        >
+                          <LogIn className="mr-2 h-5 w-5" />
+                          Login to Register
+                        </Button>
+                      ) : (
+                        <div className="p-3 bg-muted rounded-lg text-center">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            {registrationStatus.reason}
+                          </p>
+                        </div>
+                      )}
 
                       <Button
                         variant="outline"
