@@ -26,11 +26,20 @@ export async function onboardingStudent(data: OnboardingStudentSchema) {
   try {
     if (validatedData.data.studentType === "atmiya") {
       const { departmentId, programId, currentSemester, currentYear, registrationNumber } = validatedData.data;
-      await prisma.student.update({
+      await prisma.student.upsert({
         where: {
           userId: user.id,
         },
-        data: {
+        update: {
+          departmentId,
+          programId,
+          currentSemester,
+          currentYear,
+          registrationNumber,
+          university: 'Atmiya University',
+        },
+        create: {
+          userId: user.id,
           departmentId,
           programId,
           currentSemester,
@@ -41,11 +50,20 @@ export async function onboardingStudent(data: OnboardingStudentSchema) {
       });
     } else if (validatedData.data.studentType === "other") {
       const { currentSemester, currentYear, universityName } = validatedData.data;
-      await prisma.student.update({
+      await prisma.student.upsert({
         where: {
           userId: user.id,
         },
-        data: {
+        update: {
+          departmentId: null,
+          programId: null,
+          currentSemester,
+          currentYear,
+          registrationNumber: null,
+          university: universityName,
+        },
+        create: {
+          userId: user.id,
           departmentId: null,
           programId: null,
           currentSemester,

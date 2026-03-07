@@ -996,7 +996,7 @@ export function TeamManagement({
                                 <td className="p-3">
                                   {member.student.user.firstName}{" "}
                                   {member.student.user.lastName}
-                                </td>{" "}
+                                </td>
                                 <td className="p-3 text-muted-foreground">
                                   {member.student.user.email}
                                 </td>
@@ -1016,7 +1016,7 @@ export function TeamManagement({
                                       ? "Team Lead"
                                       : "Member"}
                                   </Badge>
-                                </td>{" "}
+                                </td>
                                 <td className="p-3">
                                   {member.attended ? (
                                     <Badge
@@ -1089,7 +1089,6 @@ export function TeamManagement({
                         <table className="w-full">
                           <thead className="bg-muted">
                             <tr>
-                              {" "}
                               <th className="text-left p-3 font-medium">
                                 Name
                               </th>
@@ -1109,8 +1108,8 @@ export function TeamManagement({
                                   {member.student.user.lastName}
                                 </td>
                                 <td className="p-3 text-muted-foreground">
-                                  {member.student.user.email}{" "}
-                                </td>{" "}
+                                  {member.student.user.email}
+                                </td>
                                 <td className="p-3">
                                   <Badge
                                     variant={

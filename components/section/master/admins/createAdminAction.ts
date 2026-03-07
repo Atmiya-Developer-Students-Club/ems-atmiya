@@ -2,6 +2,7 @@
 
 import { adminSchema, AdminSchema } from "@/schemas/admin";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin-server";
 import { prisma } from "@/lib/prisma";
 
 export async function createAdminAction(data: AdminSchema, captchaToken: string) {
@@ -36,6 +37,14 @@ export async function createAdminAction(data: AdminSchema, captchaToken: string)
   }
 
   try {
+    const adminSupabase = await createAdminClient();
+    await adminSupabase.auth.admin.updateUserById(admin.user.id, {
+      app_metadata: {
+        role: "ADMIN",
+        onboarding_complete: true,
+      },
+    });
+
     await prisma.user.create({
       data: {
         supabaseId: admin.user.id,

@@ -676,9 +676,9 @@ export default function EventForm({ id }: EventFormProps) {
 
   if (isLoading) {
     return (
-      <div className="max-w-5xl mx-auto p-6 space-y-6">
+      <div className="max-w-5xl mx-auto px-3 py-4 sm:p-6 space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Loading Event...
           </h1>
           <p className="text-muted-foreground">
@@ -693,10 +693,10 @@ export default function EventForm({ id }: EventFormProps) {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
+    <div className="max-w-5xl mx-auto px-3 py-4 sm:p-6 space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
           {isEditMode ? "Edit Event" : "Create New Event"}
         </h1>
         <p className="text-muted-foreground">
@@ -1986,9 +1986,9 @@ export default function EventForm({ id }: EventFormProps) {
           </Card>
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between pt-8 -mx-6 px-6 py-6 mt-8 rounded-b-lg">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-8 -mx-3 px-3 sm:-mx-6 sm:px-6 py-6 mt-8 rounded-b-lg">
             {/* Previous Button */}
-            <div className="flex-1">
+            <div className="flex-1 order-3 sm:order-none">
               {currentStep > 1 ? (
                 <Button
                   type="button"
@@ -2012,7 +2012,7 @@ export default function EventForm({ id }: EventFormProps) {
             </div>
 
             {/* Step Indicator */}
-            <div className="flex items-center gap-2 px-4">
+            <div className="hidden sm:flex items-center gap-2 px-4 order-2 sm:order-none">
               <div className="flex gap-1">
                 {FORM_STEPS.map((step) => (
                   <div
@@ -2032,7 +2032,7 @@ export default function EventForm({ id }: EventFormProps) {
             </div>
 
             {/* Next/Submit Button */}
-            <div className="flex-1 flex justify-end">
+            <div className="flex-1 flex justify-end order-1 sm:order-none">
               {currentStep === FORM_STEPS.length ? (
                 <div className="flex gap-3">
                   <Button

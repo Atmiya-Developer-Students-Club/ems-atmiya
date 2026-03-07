@@ -104,8 +104,8 @@ export function DataTable<TData, TValue>({
   });
 
   return (
-    <div className="w-full">
-      <div className="flex items-center py-4">
+    <div className="w-full min-w-0 overflow-hidden">
+      <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
         {search && (
           <Input
             placeholder={search.placeholder}
@@ -115,7 +115,7 @@ export function DataTable<TData, TValue>({
             onChange={(event) =>
               table.getColumn(search.column)?.setFilterValue(event.target.value)
             }
-            className="max-w-sm"
+            className="w-full sm:max-w-sm"
           />
         )}
         {filter && (
@@ -131,7 +131,7 @@ export function DataTable<TData, TValue>({
                 ?.setFilterValue(value === "all" ? "" : value)
             }
           >
-            <SelectTrigger className="ml-4 w-[180px]">
+            <SelectTrigger className="w-full sm:ml-4 sm:w-[180px]">
               <SelectValue placeholder={filter.placeholder} />
             </SelectTrigger>
             <SelectContent>
@@ -145,7 +145,7 @@ export function DataTable<TData, TValue>({
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
+            <Button variant="outline" className="w-full sm:w-auto sm:ml-auto">
               Columns <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -170,7 +170,7 @@ export function DataTable<TData, TValue>({
         <Table className="relative">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>                {headerGroup.headers.map((header) => (
+              <TableRow key={headerGroup.id}>{headerGroup.headers.map((header) => (
                   <TableHead 
                     key={header.id}
                     className="whitespace-nowrap px-4 py-3 text-left"
@@ -208,8 +208,7 @@ export function DataTable<TData, TValue>({
                     actions.onRowDoubleClick &&
                     actions.onRowDoubleClick(row.original)
                   }
-                >                  
-                {row.getVisibleCells().map((cell) => (
+                >{row.getVisibleCells().map((cell) => (
                     <TableCell 
                       key={cell.id} 
                       className="px-4 py-3 whitespace-nowrap overflow-hidden text-ellipsis"
@@ -252,42 +251,44 @@ export function DataTable<TData, TValue>({
         </Table>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
+      <div className="flex flex-col-reverse gap-3 py-4 sm:flex-row sm:items-center sm:justify-end">
+        <div className="flex items-center justify-between gap-2 sm:justify-end">
+          <div className="space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              Next
+            </Button>
+          </div>
+          <Select
+            value={`${table.getState().pagination.pageSize}`}
+            onValueChange={(value) => {
+              table.setPageSize(Number(value));
+            }}
           >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder={table.getState().pagination.pageSize} />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 20, 30, 40, 50].map((pageSize) => (
+                <SelectItem key={pageSize} value={`${pageSize}`}>
+                  {pageSize}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Select
-          value={`${table.getState().pagination.pageSize}`}
-          onValueChange={(value) => {
-            table.setPageSize(Number(value));
-          }}
-        >
-          <SelectTrigger className="w-[100px]">
-            <SelectValue placeholder={table.getState().pagination.pageSize} />
-          </SelectTrigger>
-          <SelectContent>
-            {[10, 20, 30, 40, 50].map((pageSize) => (
-              <SelectItem key={pageSize} value={`${pageSize}`}>
-                {pageSize}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
     </div>
   );

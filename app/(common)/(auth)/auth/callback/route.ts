@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin-server";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -16,22 +17,20 @@ export async function GET(request: Request) {
 
       if (user) {
         const currentMetadata = user.app_metadata;
-        const userMetadata = user.user_metadata;
 
         if (!currentMetadata?.role) {
-          // This is a new user without role, set it as STUDENT
-          const { error: updateError } = await supabase.auth.updateUser({
-            data: {
-              role: "STUDENT",
-              onboarding_complete: false,
-              // Preserve the full_name from Google if available
-              full_name: userMetadata?.full_name || userMetadata?.name || `${userMetadata?.given_name || ""} ${userMetadata?.family_name || ""}`.trim() || "",
-            },
-          });
+          // This is a new user without role — set it in app_metadata (where middleware reads it)
+          const adminSupabase = await createAdminClient();
+          const { error: updateError } =
+            await adminSupabase.auth.admin.updateUserById(user.id, {
+              app_metadata: {
+                role: "STUDENT",
+                onboarding_complete: false,
+              },
+            });
 
           if (updateError) {
-            console.error("Error updating user metadata:", updateError);
-            // Continue anyway, don't block the user
+            console.error("Error updating user app_metadata:", updateError);
           } else {
             console.log("Successfully set role for Google user:", user.id);
           }

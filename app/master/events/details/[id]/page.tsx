@@ -445,15 +445,15 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
       <Separator className="my-6" />
 
-      <div className="space-y-8">
+      <div className="space-y-8 min-w-0">
         <div className="overflow-hidden rounded-lg border">
-          <div className="p-2 sm:p-6">
+          <div className="p-2 sm:p-6 min-w-0 overflow-hidden">
             <EventRegistrationTable id={id} />
           </div>
         </div>
 
         <div className="overflow-hidden rounded-lg border">
-          <div className="p-2 sm:p-6">
+          <div className="p-2 sm:p-6 min-w-0 overflow-hidden">
             <EventFeedbackTable id={id} />
           </div>
         </div>

@@ -75,34 +75,45 @@ export default function LoginForm() {
   }, [searchParams]);
 
   async function onSubmit(data: LoginSchema) {
-    const response = await login(data, captchaToken);
-    if (turnstileRef.current) {
-      turnstileRef.current.reset();
-      setCaptchaToken("");
+    if (!captchaToken) {
+      toast.error("Please complete the captcha verification.");
+      return;
     }
-    if (response.error) {
-      toast.error(response.error);
-    } else {
-      await refreshUser(); // Refresh user context after login
-      toast.success("Logged in successfully");
-      const dashboardPath = getDashboardPath(response.message);
-      router.push(dashboardPath);
+    try {
+      const response = await login(data, captchaToken);
+      if (turnstileRef.current) {
+        turnstileRef.current.reset();
+        setCaptchaToken("");
+      }
+      if (response.error) {
+        toast.error(response.error);
+      } else {
+        await refreshUser(); // Refresh user context after login
+        toast.success("Logged in successfully");
+        const dashboardPath = getDashboardPath(response.message);
+        router.push(dashboardPath);
+      }
+    } catch {
+      toast.error("Something went wrong. Please check your connection and try again.");
+      if (turnstileRef.current) {
+        turnstileRef.current.reset();
+        setCaptchaToken("");
+      }
     }
   }
 
   async function handleContinueWithGoogle() {
-    setGoogleLoading(true); // Start loading
-    const response = await signInWithGoogleAction();
-
-    // Simulate a delay for loading effect
-    setTimeout(() => {
+    setGoogleLoading(true);
+    try {
+      const response = await signInWithGoogleAction();
+      if (response?.error) {
+        toast.error(response.error);
+        setGoogleLoading(false);
+      }
+    } catch {
+      // redirect() throws a NEXT_REDIRECT error — this is expected
+      // Only reset loading if we're still on the page (i.e. redirect didn't happen)
       setGoogleLoading(false);
-    }, 1000);
-
-    if (response.error) {
-      toast.error(response.error);
-    } else {
-      toast.success("Redirecting to Google...");
     }
   }
 
