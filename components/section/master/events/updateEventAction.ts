@@ -2,7 +2,7 @@
 
 import { formattedEventSchema, FormattedEventSchema } from "@/schemas/event";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function updateEventAction(
   id: string,
@@ -23,7 +23,6 @@ export async function updateEventAction(
   }
 
   const { speakers } = validatedData.data;
-  const prisma = new PrismaClient();
 
   try {
     // First, delete existing speakers
@@ -52,7 +51,5 @@ export async function updateEventAction(
   } catch (error) {
     console.error("Error updating event:", error);
     return { error: "Failed to update event" };
-  } finally {
-    await prisma.$disconnect();
   }
 }

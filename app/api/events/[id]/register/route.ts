@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const prisma = new PrismaClient();
     try {
         const { id } = await params;
         const supabase = await createClient();
@@ -107,7 +106,5 @@ export async function POST(
             { error: 'Failed to register for event' },
             { status: 500 }
         );
-    } finally {
-        await prisma.$disconnect();
     }
 }

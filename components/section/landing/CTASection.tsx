@@ -59,7 +59,7 @@ export function CTASection() {
               <Button
                 variant="outline"
                 size="lg"
-                className="border-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 backdrop-blur-sm px-8 py-4 text-lg font-semibold transition-all duration-200"
+                className="border-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 backdrop-blur-sm px-8 py-4 text-lg font-semibold transition-all duration-200 bg-transparent"
               >
                 Explore Events
               </Button>

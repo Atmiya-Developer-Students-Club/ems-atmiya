@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient, Role } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { Role } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -13,14 +14,12 @@ export async function GET(request: NextRequest) {
   }
 
   // ✅ SECURITY FIX: Check role in database, not Supabase metadata
-  const prisma = new PrismaClient();
   const dbUser = await prisma.user.findUnique({
     where: { supabaseId: user.id },
     select: { role: true }
   });
 
   if (!dbUser || dbUser.role !== Role.MASTER) {
-    await prisma.$disconnect();
     return NextResponse.json(
       { error: "Insufficient Permission" },
       { status: 403 }
@@ -70,7 +69,5 @@ export async function GET(request: NextRequest) {
       { error: "Internal Server Error" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

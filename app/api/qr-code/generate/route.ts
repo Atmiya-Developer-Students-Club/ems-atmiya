@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { QRCodeService } from '@/lib/qr-code';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
-  const prisma = new PrismaClient();
-  
   try {
     const body = await request.json();
     const { type,teamMemberId, studentId, teamId, hackathonId, eventId, userId, saveToDatabase = false } = body;
@@ -159,7 +157,5 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to generate QR code' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

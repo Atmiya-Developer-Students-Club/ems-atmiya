@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export default async function destroyDepartment(id: string) {
   const supabase = await createClient();
@@ -11,7 +11,6 @@ export default async function destroyDepartment(id: string) {
     return { error: "User not authenticated" };
   }
 
-  const prisma = new PrismaClient();
   try {
     await prisma.department.delete({
       where: {
@@ -22,7 +21,5 @@ export default async function destroyDepartment(id: string) {
   } catch (error) {
     console.error("Error deleting department:", error);
     return { error: "Failed to delete department" };
-  } finally {
-    await prisma.$disconnect();
   }
 }

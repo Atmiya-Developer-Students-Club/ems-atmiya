@@ -2,7 +2,8 @@
 
 import { masterSchema, MasterSchema } from "@/schemas/master";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { createAdminClient } from "@/utils/supabase/admin-server";
+import { prisma } from "@/lib/prisma";
 
 export async function createMasterAction(data: MasterSchema, captchaToken: string) {
   const supabase = await createClient();
@@ -34,8 +35,15 @@ export async function createMasterAction(data: MasterSchema, captchaToken: strin
     return { error: error ? error.message : "Failed to register user with Supabase" };
   }
 
-  const prisma = new PrismaClient();
   try {
+    const adminSupabase = await createAdminClient();
+    await adminSupabase.auth.admin.updateUserById(master.user.id, {
+      app_metadata: {
+        role: "MASTER",
+        onboarding_complete: true,
+      },
+    });
+
     await prisma.user.create({
       data: {
         supabaseId: master.user.id,
@@ -52,7 +60,5 @@ export async function createMasterAction(data: MasterSchema, captchaToken: strin
   } catch (error) {
     console.error("Database error:", error);
     return { error: "Internal Server Error" };
-  } finally {
-    await prisma.$disconnect();
   }
 }

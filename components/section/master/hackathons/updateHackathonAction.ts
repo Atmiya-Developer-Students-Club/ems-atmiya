@@ -2,7 +2,7 @@
 
 import { formattedHackathonSchema, FormattedHackathonSchema } from "@/schemas/hackathon";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function updateHackathonAction(id: string, data: FormattedHackathonSchema) {
   const supabase = await createClient();
@@ -20,7 +20,6 @@ export async function updateHackathonAction(id: string, data: FormattedHackathon
   }
 
   const { problemStatements, rules, evaluationCriteria } = validatedData.data;
-  const prisma = new PrismaClient();
 
   try {
     // Check if hackathon exists
@@ -87,7 +86,5 @@ export async function updateHackathonAction(id: string, data: FormattedHackathon
   } catch (error) {
     console.error("Error updating hackathon:", error);
     return { error: "Failed to update hackathon" };
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ImageResponse } from 'next/og';
 import React from 'react';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: NextRequest,
@@ -9,7 +9,6 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const prisma = new PrismaClient();
 
     const hackathon = await prisma.hackathon.findUnique({
       where: { id },
@@ -27,8 +26,6 @@ export async function GET(
         poster_url: true,
       }
     });
-
-    await prisma.$disconnect();
 
     if (!hackathon) {
       return new NextResponse('Hackathon not found', { status: 404 });

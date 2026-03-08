@@ -12,7 +12,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <AppSidebar role="master" links={masterSidebarLinks} />
-      <SidebarInset>
+      <SidebarInset className="min-w-0 overflow-hidden">
         <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 sticky p-4">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />
@@ -28,7 +28,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <QuickActionToggle />
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
+        <div className="flex flex-1 flex-col gap-4 p-4 min-w-0 overflow-hidden">{children}</div>
         <FormDialogContainer />
       </SidebarInset>
     </SidebarProvider>

@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -10,7 +10,6 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const prisma = new PrismaClient();
   try {
     // Check role in database, not Supabase metadata
     const dbUser = await prisma.user.findUnique({
@@ -31,7 +30,5 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching admins:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }

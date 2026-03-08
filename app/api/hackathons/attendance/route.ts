@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
 // Legacy attendance marking - for backward compatibility
@@ -28,8 +28,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Missing User Id" }, { status: 400 });
   }
 
-
-  const prisma = new PrismaClient();
 
   try {
     // verify team exists in the hackathon
@@ -81,7 +79,5 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error updating attendance:", error);
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }

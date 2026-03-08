@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const supabase = await createClient();
@@ -12,7 +12,6 @@ export async function GET() {
   }
 
   // Find student by supabaseId
-  const prisma = new PrismaClient();
   const student = await prisma.student.findUnique({
     where: { userId: user.id },
     include: {

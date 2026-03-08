@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { CreateAttendanceSchedulePayload } from "@/types/attendance";
 
@@ -12,8 +12,6 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const prisma = new PrismaClient();
 
   try {
     // Check if user is a Master
@@ -76,8 +74,6 @@ export async function POST(req: NextRequest) {
       { error: "Failed to create attendance schedule" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -101,8 +97,6 @@ export async function GET(req: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const prisma = new PrismaClient();
 
   try {
     // Check if user is a Master
@@ -167,7 +161,5 @@ export async function GET(req: NextRequest) {
       { error: "Failed to fetch attendance schedules" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

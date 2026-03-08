@@ -2,7 +2,7 @@
 
 import { createAdminClient } from "@/utils/supabase/admin-server";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export default async function destroyStudent(id: string) {
   const supabase = await createClient();
@@ -14,7 +14,6 @@ export default async function destroyStudent(id: string) {
     return { error: "User not authenticated" };
   }
 
-  const prisma = new PrismaClient();
   try {
     // ✅ SECURITY FIX: Check role in database, not Supabase metadata
     const dbUser = await prisma.user.findUnique({
@@ -37,7 +36,5 @@ export default async function destroyStudent(id: string) {
   } catch (error) {
     console.error("Error deleting student:", error);
     return { error: "Failed to delete student" };
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -2,7 +2,7 @@
 
 import { programSchema, ProgramSchema } from "@/schemas/program";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function createProgram(data: ProgramSchema) {
   const supabase = await createClient();
@@ -18,7 +18,6 @@ export async function createProgram(data: ProgramSchema) {
   }
 
   const { name, departmentId } = validatedData.data;
-  const prisma = new PrismaClient();
 
   try {
     await prisma.program.create({
@@ -31,7 +30,5 @@ export async function createProgram(data: ProgramSchema) {
   } catch (error) {
     console.error("Error creating program:", error);
     return { error: "Internal Server Error" };
-  } finally {
-    await prisma.$disconnect();
   }
 }

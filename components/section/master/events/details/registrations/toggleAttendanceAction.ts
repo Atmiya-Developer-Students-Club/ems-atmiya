@@ -1,8 +1,7 @@
 "use server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function toggleAttendance(registrationId: string) {
-  const prisma = new PrismaClient();
   try {
     const registration = await prisma.eventRegistration.findUnique({
       where: { id: registrationId },

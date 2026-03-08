@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { QRCodeService, QRCodeData } from '@/lib/qr-code';
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
-    const prisma = new PrismaClient();
     try {
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -71,8 +70,6 @@ export async function POST(request: NextRequest) {
             { error: 'Failed to scan QR code' },
             { status: 500 }
         );
-    } finally {
-        await prisma.$disconnect();
     }
 }
 

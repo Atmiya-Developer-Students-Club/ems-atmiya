@@ -127,3 +127,25 @@ export interface Student {
   id: string;
   user: User;
 }
+
+export interface EventRegistrationData {
+  id: string;
+  event: {
+    id: string;
+    name: string;
+    description: string;
+    poster_url: string;
+    mode: EventMode;
+    address: string | null;
+    start_date: string;
+    end_date: string | null;
+    start_time: string;
+    end_time: string | null;
+    event_type: string;
+    status: EventStatus;
+    organizer_name: string;
+    tags: string[];
+  };
+  attended: boolean;
+  createdAt: string;
+}

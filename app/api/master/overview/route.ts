@@ -1,9 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 
 export async function GET() {
-  const prisma = new PrismaClient();
   const supabase = await createClient();
 
   // Get current user session
@@ -268,8 +267,6 @@ export async function GET() {
     };
   });
 
-  // Cleanup Prisma connection
-  await prisma.$disconnect();
 
   return NextResponse.json({
     totalStudents,

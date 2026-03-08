@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { eventFeedbackSchema, EventFeedbackSchema } from "@/schemas/event";
 
 export async function submitEventFeedback(eventId: string, data: EventFeedbackSchema) {
@@ -22,8 +22,6 @@ export async function submitEventFeedback(eventId: string, data: EventFeedbackSc
   if (!validatedData.success) {
     return { error: "Invalid feedback data" };
   }
-
-  const prisma = new PrismaClient();
 
   try {
     // Fetch event details to check timing and user registration
@@ -131,7 +129,5 @@ export async function submitEventFeedback(eventId: string, data: EventFeedbackSc
   } catch (error) {
     console.error("Error submitting feedback:", error);
     return { error: "Failed to submit feedback. Please try again." };
-  } finally {
-    await prisma.$disconnect();
   }
 }

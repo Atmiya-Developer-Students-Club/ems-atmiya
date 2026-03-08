@@ -60,7 +60,7 @@ function HackathonCard({ hackathon, isRegistered }: HackathonCardProps) {
   };
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col overflow-hidden pt-0">
       <div className="relative">
         <img
           src={getImageUrl(hackathon.poster_url, "hackathon-posters")}

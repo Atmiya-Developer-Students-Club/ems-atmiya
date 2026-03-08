@@ -18,7 +18,7 @@ import { getImageUrl } from "@/lib/utils";
 import { respondToInvitationAction } from "@/components/section/student/hackathons/respondToInvitationAction";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Participation, PendingInvitation, User } from "@/types/hackathon";
+import { Participation, PendingInvitation, User, EventRegistrationData } from "@/types/hackathon";
 import {
   Dialog,
   DialogContent,
@@ -31,12 +31,14 @@ import axios from "axios";
 interface MyParticipationsProps {
   participations: Participation[];
   pendingInvitations: PendingInvitation[];
+  eventRegistrations: EventRegistrationData[];
   studentId: string;
 }
 
 export function MyParticipations({
   participations,
   pendingInvitations,
+  eventRegistrations,
   studentId,
 }: MyParticipationsProps) {
   const [activeTab, setActiveTab] = useState("participations");
@@ -259,12 +261,15 @@ export function MyParticipations({
         value={activeTab}
         onValueChange={setActiveTab}
       >
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="participations">
-            My Participations ({participations.length})
+            Hackathons ({participations.length})
+          </TabsTrigger>
+          <TabsTrigger value="events">
+            Events ({eventRegistrations.length})
           </TabsTrigger>
           <TabsTrigger value="invitations">
-            Pending Invitations ({pendingInvitations.length})
+            Invitations ({pendingInvitations.length})
           </TabsTrigger>
         </TabsList>
 
@@ -425,6 +430,82 @@ export function MyParticipations({
                           ? "Stop Scanning"
                           : "Scan Attendance QR Code"}
                       </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="events" className="mt-6">
+          {eventRegistrations.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <div className="py-8">
+                  <CalendarIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">
+                    No Event Registrations
+                  </h3>
+                  <p className="text-muted-foreground">
+                    You haven't registered for any events yet.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {eventRegistrations.map((registration) => (
+                <Card key={registration.id} className="overflow-hidden pt-0">
+                  <div className="relative h-48">
+                    <img
+                      src={getImageUrl(registration.event.poster_url, "event-posters")}
+                      alt={registration.event.name}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Status badge overlay like main EventCard */}
+                    <div className="absolute top-2 left-2 z-10">
+                      {registration.attended ? (
+                        <Badge className="bg-green-600 text-white shadow">Attended</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-white/90 text-black shadow">Registered</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <CardContent className="p-4">
+                    <h3 className="mb-2 line-clamp-1 text-xl font-bold">
+                      {registration.event.name}
+                    </h3>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      <Badge variant="outline" className="text-xs">
+                        {registration.event.event_type}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {registration.event.mode}
+                      </Badge>
+                    </div>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <CalendarIcon className="h-4 w-4" />
+                        <span>
+                          {format(new Date(registration.event.start_date), "PPP")}
+                        </span>
+                      </div>
+                      {registration.event.address && (
+                        <div className="flex items-center gap-2">
+                          <MapPinIcon className="h-4 w-4" />
+                          <span className="line-clamp-1">{registration.event.address}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          {format(new Date(registration.event.start_time), "p")}
+                          {registration.event.end_time && 
+                            ` - ${format(new Date(registration.event.end_time), "p")}`
+                          }
+                        </span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

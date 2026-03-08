@@ -1,9 +1,8 @@
 "use server";
 
-import {PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function deleteAttendance(registrationId: string) {
-  const prisma = new PrismaClient();
   try {
     await prisma.eventRegistration.delete({
       where: { id: registrationId },

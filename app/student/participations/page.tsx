@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { MyParticipations } from "@/components/section/student/participations/MyParticipations";
 import { Participation, PendingInvitation } from "@/types/hackathon";
@@ -14,8 +14,6 @@ export default async function ParticipationsPage() {
   if (!user) {
     redirect("/login");
   }
-
-  const prisma = new PrismaClient();
 
   try {
     // Find the student record
@@ -162,6 +160,38 @@ export default async function ParticipationsPage() {
       },
     });
 
+    // Get event registrations for the user
+    const eventRegistrations = await prisma.eventRegistration.findMany({
+      where: {
+        userId: user.id,
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            poster_url: true,
+            mode: true,
+            address: true,
+            start_date: true,
+            end_date: true,
+            start_time: true,
+            end_time: true,
+            event_type: true,
+            status: true,
+            organizer_name: true,
+            tags: true,
+          },
+        },
+      },
+      orderBy: {
+        event: {
+          start_date: "desc",
+        },
+      },
+    });
+
     // Transform the data to include participation status
     const participations = teamMemberships.map((membership) => {
       const team = membership.team;
@@ -239,11 +269,35 @@ export default async function ParticipationsPage() {
       status: invite.status,
     }));
 
+    // Transform event registrations
+    const transformedEventRegistrations = eventRegistrations.map((reg) => ({
+      id: reg.id,
+      event: {
+        id: reg.event.id,
+        name: reg.event.name,
+        description: reg.event.description,
+        poster_url: reg.event.poster_url,
+        mode: reg.event.mode,
+        address: reg.event.address,
+        start_date: reg.event.start_date.toISOString(),
+        end_date: reg.event.end_date?.toISOString() || null,
+        start_time: reg.event.start_time.toISOString(),
+        end_time: reg.event.end_time?.toISOString() || null,
+        event_type: reg.event.event_type,
+        status: reg.event.status,
+        organizer_name: reg.event.organizer_name,
+        tags: reg.event.tags,
+      },
+      attended: reg.attended,
+      createdAt: reg.createdAt.toISOString(),
+    }));
+
     return (
       <ErrorBoundary>
         <MyParticipations
           participations={participations as Participation[]}
           pendingInvitations={pendingInvitations as PendingInvitation[]}
+          eventRegistrations={transformedEventRegistrations}
           studentId={student.id}
         />
       </ErrorBoundary>
@@ -261,7 +315,5 @@ export default async function ParticipationsPage() {
         </div>
       </div>
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/utils/supabase/admin-server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -13,8 +13,6 @@ export async function POST(request: NextRequest) {
   if (token !== process.env.WEBHOOK_SECRET) {
     return NextResponse.json({ error: "Invalid token" }, { status: 403 });
   }
-
-  const prisma = new PrismaClient();
 
   switch (body.type) {
     case "INSERT": {
@@ -96,9 +94,6 @@ export async function POST(request: NextRequest) {
           { error: "Internal server error" },
           { status: 500 }
         );
-      } finally {
-        await prisma.$disconnect();
-        break;
       }
     }
 
@@ -122,9 +117,6 @@ export async function POST(request: NextRequest) {
           { error: "Internal server error" },
           { status: 500 }
         );
-      } finally {
-        await prisma.$disconnect();
-        break;
       }
     }
 

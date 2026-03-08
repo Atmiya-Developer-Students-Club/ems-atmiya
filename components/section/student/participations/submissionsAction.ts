@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { SubmissionsFormValues, submissionsSchema } from "./TeamManagement";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function submissionsAction(data: SubmissionsFormValues, hackathonId: string, teamId: string) {
   const supabase = await createClient();
@@ -17,8 +17,6 @@ export async function submissionsAction(data: SubmissionsFormValues, hackathonId
     return { error: "Invalid data" };
   }
   const { url } = parsedData.data;
-
-  const prisma = new PrismaClient();
 
   let hackathon;
   try {
@@ -66,7 +64,5 @@ export async function submissionsAction(data: SubmissionsFormValues, hackathonId
     return { success: true };
   } catch (error) {
     return { error: "Database error" };
-  } finally {
-    await prisma.$disconnect();
   }
 }

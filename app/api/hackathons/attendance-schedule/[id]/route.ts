@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { UpdateAttendanceSchedulePayload } from "@/types/attendance";
 
@@ -17,8 +17,6 @@ export async function PUT(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const prisma = new PrismaClient();
 
   try {
     // Check if user is a Master
@@ -84,8 +82,6 @@ export async function PUT(
       { error: "Failed to update attendance schedule" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -103,8 +99,6 @@ export async function DELETE(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const prisma = new PrismaClient();
 
   try {
     // Check if user is a Master
@@ -156,8 +150,6 @@ export async function DELETE(
       { error: "Failed to delete attendance schedule" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -175,8 +167,6 @@ export async function GET(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const prisma = new PrismaClient();
 
   try {
     // Get the attendance schedule details
@@ -253,7 +243,5 @@ export async function GET(
       { error: "Failed to fetch attendance schedule" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

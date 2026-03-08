@@ -3,7 +3,7 @@
 import { QRCodeService } from "@/lib/qr-code";
 import { studentSchema, StudentSchema } from "@/schemas/student";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function createStudentAction(data: StudentSchema, captchaToken: string) {
   const supabase = await createClient();
@@ -40,7 +40,6 @@ export async function createStudentAction(data: StudentSchema, captchaToken: str
     return { error: error ? error.message : "Failed to register user with Supabase" };
   }
 
-  const prisma = new PrismaClient();
   try {
 
     const { qrCode, qrCodeData } = await QRCodeService.generateUserQRCode(userData.user.id);
@@ -77,7 +76,5 @@ export async function createStudentAction(data: StudentSchema, captchaToken: str
   } catch (error) {
     console.error("Error creating student in Prisma:", error);
     return { error: "Failed to create student" };
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -2,7 +2,7 @@
 
 import { departmentSchema, DepartmentSchema } from "@/schemas/department";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function createDepartment(data: DepartmentSchema) {
   const supabase = await createClient();
@@ -18,7 +18,6 @@ export async function createDepartment(data: DepartmentSchema) {
   }
 
   const { name, faculty } = validatedData.data;
-  const prisma = new PrismaClient();
 
   try {
     await prisma.department.create({
@@ -31,7 +30,5 @@ export async function createDepartment(data: DepartmentSchema) {
   } catch (error) {
     console.error("Error creating department:", error);
     return { error: "Internal Server Error" };
-  } finally {
-    await prisma.$disconnect();
   }
 }

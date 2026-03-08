@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const prisma = new PrismaClient();
     try {
         const { id } = await params;
         const supabase = await createClient();
@@ -43,7 +42,5 @@ export async function GET(
             { error: 'Failed to check registration status' },
             { status: 500 }
         );
-    } finally {
-        await prisma.$disconnect();
     }
 }

@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 interface HackathonLayoutProps {
   children: React.ReactNode;
@@ -10,8 +10,6 @@ export async function generateMetadata({ params }: HackathonLayoutProps): Promis
   const { id } = await params;
   
   try {
-    const prisma = new PrismaClient();
-    
     const hackathon = await prisma.hackathon.findUnique({
       where: { id },
       select: {
@@ -27,8 +25,6 @@ export async function generateMetadata({ params }: HackathonLayoutProps): Promis
         team_size_limit: true,
       }
     });
-
-    await prisma.$disconnect();
 
     if (!hackathon) {
       return {

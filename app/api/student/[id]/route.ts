@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   req: NextRequest,
@@ -15,8 +15,6 @@ export async function GET(
   if (!currentUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const prisma = new PrismaClient();
 
   try {    // Make sure the user is only allowed to fetch their own data
     // or allow admins/masters to fetch any user's data
@@ -59,7 +57,5 @@ export async function GET(
       { error: "Failed to fetch user data" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

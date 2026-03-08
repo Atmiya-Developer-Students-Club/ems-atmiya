@@ -1,7 +1,8 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient, Role } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { Role } from "@prisma/client";
 
 export async function deleteEventAction(id: string) {
   const supabase = await createClient();
@@ -16,8 +17,6 @@ export async function deleteEventAction(id: string) {
   if (user.app_metadata.role !== Role.MASTER && user.app_metadata.role !== Role.ADMIN) {
     return { success: false, error: "Insufficient Permission" };
   }
-
-  const prisma = new PrismaClient();
 
   try {
     await prisma.event.delete({

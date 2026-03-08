@@ -2,14 +2,12 @@
 
 import { formattedHackathonSchema, FormattedHackathonSchema } from "@/schemas/hackathon";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { QRCodeService } from "@/lib/qr-code";
 import axios from "axios";
 import { generateHackathonEmailTemplate } from "./mail/template";
 
 export async function createHackathonAction(data: FormattedHackathonSchema) {
-  let prisma: PrismaClient | undefined;
-
   try {
     console.log("Starting createHackathonAction");
 
@@ -32,7 +30,6 @@ export async function createHackathonAction(data: FormattedHackathonSchema) {
     }
 
     const { problemStatements, rules } = validatedData.data;
-    prisma = new PrismaClient();
 
     console.log("Creating hackathon in database");
 
@@ -143,9 +140,5 @@ export async function createHackathonAction(data: FormattedHackathonSchema) {
     }
 
     return { error: errorMessage };
-  } finally {
-    if (prisma) {
-      await prisma.$disconnect();
-    }
   }
 }

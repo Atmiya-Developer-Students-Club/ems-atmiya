@@ -2,7 +2,7 @@
 
 import { sendMail } from "@/utils/functions/sendMail";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { generateHackathonInvitationEmail } from "./mail/template";
 
 export async function inviteTeamMemberAction(teamId: string, studentEmail: string) {
@@ -14,8 +14,6 @@ export async function inviteTeamMemberAction(teamId: string, studentEmail: strin
   if (!user) {
     return { error: "User not authenticated" };
   }
-
-  const prisma = new PrismaClient();
 
   try {
     // Check if the team exists
@@ -162,7 +160,5 @@ export async function inviteTeamMemberAction(teamId: string, studentEmail: strin
   } catch (error) {
     console.error("Error inviting team member:", error);
     return { error: "Failed to invite team member" };
-  } finally {
-    await prisma.$disconnect();
   }
 }

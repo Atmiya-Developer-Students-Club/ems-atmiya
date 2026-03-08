@@ -1,40 +1,64 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { createAdminClient } from "@/utils/supabase/admin-server";
 
 export async function updatePhone(phone: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  if (!phone || !/^\d{10}$/.test(phone)) {
+    return { error: "Invalid phone number" };
+  }
 
-  if (!user) {
-    return { error: 'User not authenticated' };
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: getUserError,
+  } = await supabase.auth.getUser();
+
+  if (getUserError || !user) {
+    return { error: "User not authenticated" };
   }
 
   if (user.user_metadata.phone) {
-    return { error: 'Phone number already exists' };
+    return { success: true };
   }
 
-  const { error } = await supabase.auth.updateUser({
-    data: {
-      phone,
-    }
-  });
-  if (error) {
-    console.error('Supabase update error:', error);
-    return { error: 'Failed to update phone number in Supabase' };
-  }
-
-  const prisma = new PrismaClient();
   try {
-    await prisma.user.update({
-      where: { supabaseId: user.id },
-      data: { phone },
+    // Update Supabase metadata first (more reliable, and what PhoneDialog checks)
+    const adminSupabase = await createAdminClient();
+    const { error } = await adminSupabase.auth.admin.updateUserById(user.id, {
+      user_metadata: {
+        ...user.user_metadata,
+        phone,
+      },
     });
+    if (error) {
+      console.error("Supabase metadata update error:", error);
+      return { error: "Failed to update phone number." };
+    }
+
+    // Best-effort sync to Prisma DB (dynamic import to avoid module-level DB connection)
+    try {
+      const { prisma } = await import("@/lib/prisma");
+      await Promise.race([
+        prisma.user.update({
+          where: { supabaseId: user.id },
+          data: { phone },
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("DB sync timeout")), 5000)
+        ),
+      ]);
+    } catch (dbError) {
+      console.error("Prisma phone sync failed (phone saved in Supabase):", dbError);
+    }
+
     return { success: true };
   } catch (error) {
-    return { error: 'Failed to update phone number' };
-  } finally {
-    await prisma.$disconnect();
+    console.error("Phone update error:", error);
+    return {
+      error:
+        "Failed to update phone number. " +
+        (error instanceof Error ? error.message : ""),
+    };
   }
 }

@@ -1,12 +1,10 @@
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET() {
   const supabase = await createClient();
 
-
-  const prisma = new PrismaClient();
   try {
 
     const departments = await prisma.department.findMany({
@@ -19,7 +17,5 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching departments:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }

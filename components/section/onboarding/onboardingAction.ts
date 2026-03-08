@@ -4,7 +4,7 @@ import { QRCodeService } from "@/lib/qr-code";
 import { onboardingStudentSchema, OnboardingStudentSchema } from "@/schemas/onboardingStudentSchema";
 import { createAdminClient } from "@/utils/supabase/admin-server";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function onboardingStudent(data: OnboardingStudentSchema) {
   const validatedData = onboardingStudentSchema.safeParse(data);
@@ -12,7 +12,6 @@ export async function onboardingStudent(data: OnboardingStudentSchema) {
     return { error: "Onboarding data is invalid" };
   }
 
-  const prisma = new PrismaClient();
   const supabase = await createClient();
   const adminSupabase = await createAdminClient();
 
@@ -27,11 +26,20 @@ export async function onboardingStudent(data: OnboardingStudentSchema) {
   try {
     if (validatedData.data.studentType === "atmiya") {
       const { departmentId, programId, currentSemester, currentYear, registrationNumber } = validatedData.data;
-      await prisma.student.update({
+      await prisma.student.upsert({
         where: {
           userId: user.id,
         },
-        data: {
+        update: {
+          departmentId,
+          programId,
+          currentSemester,
+          currentYear,
+          registrationNumber,
+          university: 'Atmiya University',
+        },
+        create: {
+          userId: user.id,
           departmentId,
           programId,
           currentSemester,
@@ -42,11 +50,20 @@ export async function onboardingStudent(data: OnboardingStudentSchema) {
       });
     } else if (validatedData.data.studentType === "other") {
       const { currentSemester, currentYear, universityName } = validatedData.data;
-      await prisma.student.update({
+      await prisma.student.upsert({
         where: {
           userId: user.id,
         },
-        data: {
+        update: {
+          departmentId: null,
+          programId: null,
+          currentSemester,
+          currentYear,
+          registrationNumber: null,
+          university: universityName,
+        },
+        create: {
+          userId: user.id,
           departmentId: null,
           programId: null,
           currentSemester,
@@ -111,7 +128,5 @@ export async function onboardingStudent(data: OnboardingStudentSchema) {
     console.error("Error during onboarding:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
     return { error: "Failed to complete onboarding", message: errorMessage };
-  } finally {
-    await prisma.$disconnect();
   }
 }

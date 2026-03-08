@@ -3,7 +3,7 @@
 import { QRCodeService } from "@/lib/qr-code";
 import { formattedEventSchema, FormattedEventSchema } from "@/schemas/event";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import axios from "axios";
 import { generateEventEmailHTML } from "./mail/template";
 
@@ -23,7 +23,6 @@ export async function createEventAction(data: FormattedEventSchema) {
   }
 
   const { speakers } = validatedData.data;
-  const prisma = new PrismaClient();
 
   try {
     const event = await prisma.event.create({
@@ -103,7 +102,5 @@ export async function createEventAction(data: FormattedEventSchema) {
   } catch (error) {
     console.error("Error creating event:", error);
     return { error: "Failed to create event" };
-  } finally {
-    await prisma.$disconnect();
   }
 }

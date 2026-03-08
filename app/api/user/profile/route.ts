@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -48,8 +48,6 @@ export async function PUT(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    const prisma = new PrismaClient();
 
     try {
       await prisma.user.update({

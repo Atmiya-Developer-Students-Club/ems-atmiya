@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 interface EventLayoutProps {
   children: React.ReactNode;
@@ -10,8 +10,6 @@ export async function generateMetadata({ params }: EventLayoutProps): Promise<Me
   const { eventId } = await params;
   
   try {
-    const prisma = new PrismaClient();
-    
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       select: {
@@ -28,8 +26,6 @@ export async function generateMetadata({ params }: EventLayoutProps): Promise<Me
         poster_url: true,
       }
     });
-
-    await prisma.$disconnect();
 
     if (!event) {
       return {

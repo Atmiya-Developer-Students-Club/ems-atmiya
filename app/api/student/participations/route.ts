@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { Participation, PendingInvitation } from "@/types/hackathon";
 
 export async function GET() {
@@ -12,8 +12,6 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const prisma = new PrismaClient();
 
   try {
     // Find the student record
@@ -252,7 +250,5 @@ export async function GET() {
       { error: "Failed to fetch participations" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -1,17 +1,10 @@
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-  //gust check
-  if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const prisma = new PrismaClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   try {
     // Get all hackathons
@@ -21,38 +14,40 @@ export async function GET() {
       },
     });
 
-    // Check for user registrations if user is a student
+    // Check for user registrations if user is logged in
     const userRegistrations: Record<string, boolean> = {};
 
-    // Find the student record
-    const student = await prisma.student.findFirst({
-      where: {
-        userId: user?.id,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (student) {
-      // Get all teams the student is a member of
-      const teamMemberships = await prisma.hackathonTeamMember.findMany({
+    if (user) {
+      // Find the student record
+      const student = await prisma.student.findFirst({
         where: {
-          studentId: student.id,
+          userId: user.id,
         },
-        include: {
-          team: {
-            select: {
-              hackathonId: true,
+        select: {
+          id: true,
+        },
+      });
+
+      if (student) {
+        // Get all teams the student is a member of
+        const teamMemberships = await prisma.hackathonTeamMember.findMany({
+          where: {
+            studentId: student.id,
+          },
+          include: {
+            team: {
+              select: {
+                hackathonId: true,
+              },
             },
           },
-        },
-      });
+        });
 
-      // Map hackathon IDs to registration status
-      teamMemberships.forEach((membership) => {
-        userRegistrations[membership.team.hackathonId] = true;
-      });
+        // Map hackathon IDs to registration status
+        teamMemberships.forEach((membership) => {
+          userRegistrations[membership.team.hackathonId] = true;
+        });
+      }
     }
 
     return NextResponse.json({
@@ -65,7 +60,5 @@ export async function GET() {
       { error: "Failed to fetch hackathons" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

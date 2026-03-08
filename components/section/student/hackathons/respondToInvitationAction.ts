@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function respondToInvitationAction(teamId: string, accept: boolean) {
   const supabase = await createClient();
@@ -12,8 +12,6 @@ export async function respondToInvitationAction(teamId: string, accept: boolean)
   if (!user) {
     return { error: "User not authenticated" };
   }
-
-  const prisma = new PrismaClient();
 
   try {
     // Check if the current user is a student
@@ -110,7 +108,5 @@ export async function respondToInvitationAction(teamId: string, accept: boolean)
   } catch (error) {
     console.error("Error responding to invitation:", error);
     return { error: "Failed to process invitation response" };
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { HackathonTeam, PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { HackathonTeam } from "@prisma/client";
 
 export async function GET(
   req: NextRequest,
@@ -14,8 +15,6 @@ export async function GET(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const prisma = new PrismaClient();
 
   try {
     const hackathonId = id;
@@ -231,7 +230,5 @@ export async function GET(
       { error: "Failed to fetch hackathon details" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 /**
  * Validates that a user's role in Supabase matches their role in the database
@@ -14,13 +14,11 @@ export async function validateUserRole(userId: string): Promise<{
 }> {
   try {
     const supabase = await createClient();
-    const prisma = new PrismaClient();
 
     // Get user from Supabase
     const { data: { user }, error: supabaseError } = await supabase.auth.getUser();
 
     if (supabaseError || !user || user.id !== userId) {
-      await prisma.$disconnect();
       return { isValid: false, error: "User not found in Supabase" };
     }
 
@@ -33,7 +31,6 @@ export async function validateUserRole(userId: string): Promise<{
     });
 
     if (!dbUser) {
-      await prisma.$disconnect();
       return { isValid: false, error: "User not found in database" };
     }
 
@@ -41,7 +38,6 @@ export async function validateUserRole(userId: string): Promise<{
 
     // Handle case where both roles are undefined (new user or data inconsistency)
     if (!supabaseRole && !databaseRole) {
-      await prisma.$disconnect();
       return {
         isValid: false,
         error: "No role assigned to user",
@@ -74,8 +70,6 @@ export async function validateUserRole(userId: string): Promise<{
       }
     }
 
-    await prisma.$disconnect();
-
     return {
       isValid: isValid || autoFixed,
       supabaseRole,
@@ -100,7 +94,6 @@ export async function syncUserRole(userId: string): Promise<{
 }> {
   try {
     const supabase = await createClient();
-    const prisma = new PrismaClient();
 
     // Get user from database
     const dbUser = await prisma.user.findUnique({
@@ -123,8 +116,6 @@ export async function syncUserRole(userId: string): Promise<{
       console.error("Error syncing user role:", updateError);
       return { success: false, error: "Failed to sync role" };
     }
-
-    await prisma.$disconnect();
 
     return { success: true };
 

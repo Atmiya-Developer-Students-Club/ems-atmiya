@@ -2,7 +2,7 @@
 
 import { teamSchema, TeamSchema } from "@/schemas/hackathon";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function createTeamAction(teamData: TeamSchema, hackathonId: string) {
   const supabase = await createClient();
@@ -21,8 +21,6 @@ export async function createTeamAction(teamData: TeamSchema, hackathonId: string
 
   const { teamName, problemStatementId, mentor, mentorMail } = parsedTeamData.data;
 
-  const prisma = new PrismaClient();
-
   try {
     const hackathon = await prisma.hackathon.findUnique({
       where: { id: hackathonId },
@@ -33,8 +31,6 @@ export async function createTeamAction(teamData: TeamSchema, hackathonId: string
   } catch (error) {
     console.error("Error creating team:", error);
     return { error: "Failed to create team" };
-  } finally {
-    await prisma.$disconnect();
   }
 
   try {
@@ -150,7 +146,5 @@ export async function createTeamAction(teamData: TeamSchema, hackathonId: string
   } catch (error) {
     console.error("Error creating team:", error);
     return { error: "Failed to create team" };
-  } finally {
-    await prisma.$disconnect();
   }
 }

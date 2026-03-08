@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function toggleHackathonSubmission(hackathonId: string) {
   const supabase = await createClient();
@@ -17,7 +17,6 @@ export async function toggleHackathonSubmission(hackathonId: string) {
     return { success: false, message: "User is not a master" };
   }
 
-  const prisma = new PrismaClient();
   try {
     const hackathon = await prisma.hackathon.findUnique({
       where: { id: hackathonId },

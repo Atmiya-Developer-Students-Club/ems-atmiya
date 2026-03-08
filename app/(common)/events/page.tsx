@@ -10,8 +10,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LandingHeader } from "@/components/global/navigation-bar/LandingHeader";
-
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { HackathonList } from "@/components/section/student/hackathons/HackathonList";
+import { Calendar, Code } from "lucide-react";
 
 // Skeleton loading component for events
 function EventCardSkeleton() {
@@ -102,32 +103,28 @@ type Event = {
 };
 
 export default function Page() {
-  const { data, isLoading, error } = useSWR<Event[]>("/api/events", fetcher);
+  const [activeTab, setActiveTab] = useState("events");
+
+  // Shared filter state
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState<string>("");
   const [type, setType] = useState<string>("");
   const [status, setStatus] = useState<string>("");
 
-  // Hackathons state
+  // Data fetching
+  const { data, isLoading, error } = useSWR<Event[]>("/api/events", fetcher);
   const { data: hackathonData, isLoading: isHackathonsLoading, error: hackathonsError } = useSWR<any>("/api/hackathons", fetcher);
-  const [hackathonSearch, setHackathonSearch] = useState("");
-  const [hackathonMode, setHackathonMode] = useState<string>("");
-  const [hackathonType, setHackathonType] = useState<string>("");
-  const [hackathonStatus, setHackathonStatus] = useState<string>("");
 
-  // Filtered hackathons
-  const filteredHackathons = useMemo(() => {
-    if (!hackathonData || !hackathonData.hackathons) return [];
-    return hackathonData.hackathons.filter((hackathon: any) => {
-      const matchesSearch = hackathon.name.toLowerCase().includes(hackathonSearch.toLowerCase()) || (hackathon.description?.toLowerCase().includes(hackathonSearch.toLowerCase()) ?? false);
-      const matchesMode = hackathonMode === "all" || hackathonMode === "" ? true : hackathon.mode === hackathonMode;
-      const matchesType = hackathonType === "all" || hackathonType === "" ? true : hackathon.type === hackathonType;
-      const matchesStatus = hackathonStatus === "all" || hackathonStatus === "" ? true : hackathon.status === hackathonStatus;
-      return matchesSearch && matchesMode && matchesType && matchesStatus;
-    });
-  }, [hackathonData, hackathonSearch, hackathonMode, hackathonType, hackathonStatus]);
+  // Reset filters when switching tabs
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setSearch("");
+    setMode("");
+    setType("");
+    setStatus("");
+  };
 
-  // Filter and search logic
+  // Filtered events
   const filteredEvents = useMemo(() => {
     if (!data) return [];
     return data.filter((event) => {
@@ -139,17 +136,59 @@ export default function Page() {
     });
   }, [data, search, mode, type, status]);
 
+  // Filtered hackathons
+  const filteredHackathons = useMemo(() => {
+    if (!hackathonData || !hackathonData.hackathons) return [];
+    return hackathonData.hackathons.filter((hackathon: any) => {
+      const matchesSearch = hackathon.name.toLowerCase().includes(search.toLowerCase()) || (hackathon.description?.toLowerCase().includes(search.toLowerCase()) ?? false);
+      const matchesMode = mode === "all" || mode === "" ? true : hackathon.mode === mode;
+      const matchesType = type === "all" || type === "" ? true : hackathon.type === type;
+      const matchesStatus = status === "all" || status === "" ? true : hackathon.status === status;
+      return matchesSearch && matchesMode && matchesType && matchesStatus;
+    });
+  }, [hackathonData, search, mode, type, status]);
+
   return (
-    <div className="">
+    <div>
       <LandingHeader />
       <main className="pt-10 px-2 pb-20">
-        <div className="max-w-screen-xl mx-auto space-y-16">
-          {/* Events Section */}
-            <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6" id="events">
-              <div className="flex flex-col sm:flex-row gap-4 w-full">
-                <Input placeholder="Search events..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:w-64" />
+        <div className="max-w-screen-xl mx-auto">
+          {/* Page header */}
+          <div className="mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+              Explore
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">
+              Discover and participate in events and hackathons.
+            </p>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
+            {/* Tabs + Filters row */}
+            <div className="flex flex-col gap-4 mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <TabsList>
+                  <TabsTrigger value="events" className="gap-1.5">
+                    <Calendar className="size-4" />
+                    Events
+                  </TabsTrigger>
+                  <TabsTrigger value="hackathons" className="gap-1.5">
+                    <Code className="size-4" />
+                    Hackathons
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              {/* Common filters panel */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <Input
+                  placeholder={activeTab === "events" ? "Search events..." : "Search hackathons..."}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full sm:w-64"
+                />
                 <Select value={mode} onValueChange={setMode}>
-                  <SelectTrigger className="w-full sm:w-40" >
+                  <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="Mode" />
                   </SelectTrigger>
                   <SelectContent>
@@ -159,20 +198,22 @@ export default function Page() {
                     <SelectItem value="HYBRID">Hybrid</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={type} onValueChange={setType}>
-                  <SelectTrigger className="w-full sm:w-40" >
-                    <SelectValue placeholder="Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="TECHNICAL">Technical</SelectItem>
-                    <SelectItem value="CULTURAL">Cultural</SelectItem>
-                    <SelectItem value="SPORTS">Sports</SelectItem>
-                    <SelectItem value="OTHER">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                {activeTab === "events" && (
+                  <Select value={type} onValueChange={setType}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="TECHNICAL">Technical</SelectItem>
+                      <SelectItem value="CULTURAL">Cultural</SelectItem>
+                      <SelectItem value="SPORTS">Sports</SelectItem>
+                      <SelectItem value="OTHER">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
                 <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger className="w-full sm:w-40" >
+                  <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -183,8 +224,6 @@ export default function Page() {
                     <SelectItem value="CANCELLED">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="flex gap-2 justify-end">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -198,112 +237,62 @@ export default function Page() {
                 </Button>
               </div>
             </div>
-            <div className="mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Events</h2>
-              <p className="text-gray-500 dark:text-gray-400 mt-1">Discover and participate in a variety of events.</p>
-            </div>
-            {isLoading || !data ? (
-              <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <EventCardSkeleton key={index} />
-                ))}
-              </div>
-            ) : error ? (
-              <div className="flex justify-center items-center h-64 text-lg font-medium text-destructive">Failed to load events data</div>
-            ) : (
-              <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredEvents.length === 0 ? (
-                  <div className="col-span-full text-center text-muted-foreground py-16">No events found.</div>
-                ) : (
-                  filteredEvents.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      id={event.id}
-                      name={event.name}
-                      description={event.description}
-                      poster_url={event.poster_url}
-                      address={event.address}
-                      start_date={event.start_date}
-                      mode={event.mode}
-                      price={event.ticket_price}
-                    />
-                  ))
-                )}
-              </div>
-            )}
 
-          {/* Hackathons Section */}
-            <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6" id="hackathons">
-              <div className="flex flex-col sm:flex-row gap-4 w-full">
-                <Input placeholder="Search hackathons..." value={hackathonSearch} onChange={(e) => setHackathonSearch(e.target.value)} className="w-full sm:w-64" />
-                <Select value={hackathonMode} onValueChange={setHackathonMode}>
-                  <SelectTrigger className="w-full sm:w-40" >
-                    <SelectValue placeholder="Mode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Modes</SelectItem>
-                    <SelectItem value="ONLINE">Online</SelectItem>
-                    <SelectItem value="OFFLINE">Offline</SelectItem>
-                    <SelectItem value="HYBRID">Hybrid</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={hackathonType} onValueChange={setHackathonType}>
-                  <SelectTrigger className="w-full sm:w-40" >
-                    <SelectValue placeholder="Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="TECHNICAL">Technical</SelectItem>
-                    <SelectItem value="CULTURAL">Cultural</SelectItem>
-                    <SelectItem value="SPORTS">Sports</SelectItem>
-                    <SelectItem value="OTHER">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={hackathonStatus} onValueChange={setHackathonStatus}>
-                  <SelectTrigger className="w-full sm:w-40" >
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="UPCOMING">Upcoming</SelectItem>
-                    <SelectItem value="ONGOING">Ongoing</SelectItem>
-                    <SelectItem value="COMPLETED">Completed</SelectItem>
-                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setHackathonSearch("");
-                    setHackathonMode("");
-                    setHackathonType("");
-                    setHackathonStatus("");
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              </div>
-            </div>
-            <div className="mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Hackathons</h2>
-              <p className="text-gray-500 dark:text-gray-400 mt-1">Showcase your skills and win prizes in upcoming hackathons.</p>
-            </div>
-            {isHackathonsLoading || !hackathonData ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <HackathonCardSkeleton key={index} />
-                ))}
-              </div>
-            ) : hackathonsError ? (
-              <div className="flex justify-center items-center h-64 text-lg font-medium text-destructive">Failed to load hackathons data</div>
-            ) : (
-              <HackathonList
-                hackathons={filteredHackathons}
-                userRegistrations={hackathonData.userRegistrations || {}}
-              />
-            )}
+            {/* Events tab content */}
+            <TabsContent value="events">
+              {isLoading || !data ? (
+                <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <EventCardSkeleton key={index} />
+                  ))}
+                </div>
+              ) : error ? (
+                <div className="flex justify-center items-center h-64 text-lg font-medium text-destructive">
+                  Failed to load events data
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                  {filteredEvents.length === 0 ? (
+                    <div className="col-span-full text-center text-muted-foreground py-16">No events found.</div>
+                  ) : (
+                    filteredEvents.map((event) => (
+                      <EventCard
+                        key={event.id}
+                        id={event.id}
+                        name={event.name}
+                        description={event.description}
+                        poster_url={event.poster_url}
+                        address={event.address}
+                        start_date={event.start_date}
+                        mode={event.mode}
+                        price={event.ticket_price}
+                      />
+                    ))
+                  )}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Hackathons tab content */}
+            <TabsContent value="hackathons">
+              {isHackathonsLoading || !hackathonData ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <HackathonCardSkeleton key={index} />
+                  ))}
+                </div>
+              ) : hackathonsError ? (
+                <div className="flex justify-center items-center h-64 text-lg font-medium text-destructive">
+                  Failed to load hackathons data
+                </div>
+              ) : (
+                <HackathonList
+                  hackathons={filteredHackathons}
+                  userRegistrations={hackathonData.userRegistrations || {}}
+                />
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>

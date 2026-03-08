@@ -1,6 +1,6 @@
 import { markAttendanceSchema } from "@/components/section/master/hackathons/attendance/schema";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
   const { sheduleId, studentId, teamId } = parsedData.data;
   console.log("Marking attendance for student:", studentId, "by user:", user.id, "for schedule:", sheduleId);
 
-  const prisma = new PrismaClient();
   try {
     const team = await prisma.hackathonTeam.findFirst({
       where: {
@@ -70,7 +69,5 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Error marking attendance:", error);
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }

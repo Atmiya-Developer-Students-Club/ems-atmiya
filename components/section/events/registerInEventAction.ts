@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { template as registrationConfirmationTemplate } from "@/components/section/events/email/registrationConfirmation";
 import { sendMail } from "@/utils/functions/sendMail";
 import { getDashboardPath } from "@/utils/functions/getDashboardPath";
@@ -62,7 +62,6 @@ export async function registerInEventAction(eventId: string) {
     return { error: "User onboarding not complete" };
   }
 
-  const prisma = new PrismaClient();
   try {
     // Fetch event to validate registration window / limits
     const event = await prisma.event.findUnique({
@@ -184,13 +183,10 @@ export async function registerInEventAction(eventId: string) {
       } catch (error) {
         console.error("Error registering in event:", error);
         return { error: "Failed to register in event" };
-      } finally {
-        await prisma.$disconnect();
       }
     }
   } catch (error) {
     console.error("Error during registration flow:", error);
-    await prisma.$disconnect();
     return { error: "Failed to register in event" };
   }
 }

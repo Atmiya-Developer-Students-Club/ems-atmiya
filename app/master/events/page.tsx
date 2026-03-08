@@ -32,15 +32,15 @@ export default function Page() {
   if (error) return <p>Error: {error}</p>;
 
   return (
-    <div>
-      <div className="flex items-start justify-between">
+    <div className="min-w-0 overflow-hidden">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <Heading
           title={`Events - ${data?.length || 0}`}
           description="Manage Events Details"
         />
         <Button
           onClick={() => router.push("/master/events/create")}
-          className="mb-4"
+          className="w-full sm:w-auto"
         >
           <Plus className="mr-2 h-4 w-4" /> Create New Event
         </Button>

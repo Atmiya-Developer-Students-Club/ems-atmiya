@@ -1,9 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import React from 'react';
-import { PrismaClient } from '@prisma/client';
-
-export const runtime = 'edge';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,8 +19,6 @@ export async function GET(request: NextRequest) {
     let dynamicData = null;
 
     if (eventId || hackathonId) {
-      const prisma = new PrismaClient();
-      
       try {
         if (eventId) {
           const event = await prisma.event.findUnique({
@@ -98,8 +94,8 @@ export async function GET(request: NextRequest) {
             };
           }
         }
-      } finally {
-        await prisma.$disconnect();
+      } catch (dbError) {
+        console.error('Error fetching data for OG image:', dbError);
       }
     }
 

@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -16,8 +16,6 @@ export async function GET(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const prisma = new PrismaClient();
 
   try {
     // Check if user is a Master or Admin
@@ -202,7 +200,5 @@ export async function GET(
       { error: "Failed to fetch attendance statistics" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
