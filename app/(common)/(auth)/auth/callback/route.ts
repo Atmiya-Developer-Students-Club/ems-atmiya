@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin-server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -33,6 +34,35 @@ export async function GET(request: Request) {
             console.error("Error updating user app_metadata:", updateError);
           } else {
             console.log("Successfully set role for Google user:", user.id);
+          }
+
+          // Ensure User record exists in Prisma DB (webhook may not have fired yet)
+          try {
+            const existingUser = await prisma.user.findUnique({
+              where: { supabaseId: user.id },
+            });
+
+            if (!existingUser) {
+              const fullName = user.user_metadata?.full_name || "";
+              const nameParts = fullName.trim().split(/\s+/);
+              const firstName = nameParts[0] || user.email?.split("@")[0] || "";
+              const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "user";
+
+              await prisma.user.create({
+                data: {
+                  supabaseId: user.id,
+                  email: user.email!,
+                  firstName,
+                  lastName,
+                  role: "STUDENT",
+                  students: {
+                    create: {},
+                  },
+                },
+              });
+            }
+          } catch (dbError) {
+            console.error("Error creating user in Prisma during callback:", dbError);
           }
         }
       }

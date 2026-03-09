@@ -20,7 +20,6 @@ export default function RegisterForm() {
   const [captchaToken, setCaptchaToken] = useState("");
   const turnstileRef = useRef<any>(null);
   const [googleLoading, setGoogleLoading] = useState(false); // Add loading state
-  const [showPasswordRequirements, setShowPasswordRequirements] = useState(true);
   const [showPassword, setShowPassword] = useState(false)
   const form = useForm({
     resolver: zodResolver(registerStudentSchema),
@@ -57,7 +56,6 @@ export default function RegisterForm() {
     } else {
       toast.success("Registration successful! Please check your email for verification.");
       form.reset();
-      setShowPasswordRequirements(false);
     }
   }
 
@@ -175,14 +173,7 @@ export default function RegisterForm() {
                       text: req.text,
                     }));
                     const strengthScore = strength.filter((req) => req.met).length;
-
-                    if (strengthScore === requirements.length) {
-                      setShowPasswordRequirements(false);
-                    } else {
-                      if (!showPasswordRequirements) {
-                        setShowPasswordRequirements(true);
-                      }
-                    }
+                    const allMet = strengthScore === requirements.length;
 
                     const getStrengthColor = (score: number) => {
                       if (score === 0) return "bg-border";
@@ -233,7 +224,7 @@ export default function RegisterForm() {
                         </FormControl>
                         {/* AnimatePresence for smooth show/hide */}
                         <AnimatePresence>
-                          {field.value && showPasswordRequirements && (
+                          {field.value && !allMet && (
                             <motion.div
                               key="password-strength"
                               initial={{ opacity: 0, y: -10 }}
@@ -286,7 +277,7 @@ export default function RegisterForm() {
 
                 <Turnstile
                   ref={turnstileRef}
-                  siteKey="0x4AAAAAABeFnZ4TqqZ1FHIk"
+                  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
                   onSuccess={(token) => {
                     setCaptchaToken(token);
                   }}

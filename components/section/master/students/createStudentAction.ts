@@ -41,6 +41,14 @@ export async function createStudentAction(data: StudentSchema, captchaToken: str
   }
 
   try {
+    if (registrationNumber) {
+      const existing = await prisma.student.findUnique({
+        where: { registrationNumber },
+      });
+      if (existing) {
+        return { error: "A student with this registration number already exists." };
+      }
+    }
 
     const { qrCode, qrCodeData } = await QRCodeService.generateUserQRCode(userData.user.id);
 

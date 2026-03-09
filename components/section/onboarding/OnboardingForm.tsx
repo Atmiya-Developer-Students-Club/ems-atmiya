@@ -2,7 +2,7 @@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Command, CommandInput, CommandList, CommandItem, CommandEmpty } from "@/components/ui/command";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { onboardingStudentSchema, OnboardingStudentSchema } from "@/schemas/onboardingStudentSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -28,31 +28,49 @@ export default function OnboardingForm() {
   const [_, setShowDropdown] = useState(false);
   const [loadingUniversity, setLoadingUniversity] = useState(false);
   const [universitySelected, setUniversitySelected] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Debounced search function
   const searchUniversities = useCallback(async (query: string) => {
-    if (query.length > 2) {
-      setLoadingUniversity(true);
-      try {
-        const res = await fetch(`/api/colleges?keyword=${encodeURIComponent(query)}`);
-        const result = await res.json();
-        setUniversityOptions(result.colleges);
-      } catch {
-        setUniversityOptions([]);
-      }
-      setLoadingUniversity(false);
-    } else {
+    if (query.length < 1) {
       setUniversityOptions([]);
+      return;
+    }
+
+    // Cancel any in-flight request
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setLoadingUniversity(true);
+    try {
+      const res = await fetch(`/api/colleges?keyword=${encodeURIComponent(query)}`, {
+        signal: controller.signal,
+      });
+      const result = await res.json();
+      if (!controller.signal.aborted) {
+        setUniversityOptions(result.colleges ?? []);
+      }
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      setUniversityOptions([]);
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoadingUniversity(false);
+      }
     }
   }, []);
 
   // Effect to handle university search with debouncing
   useEffect(() => {
+    if (!universityQuery || universitySelected) {
+      setUniversityOptions([]);
+      return;
+    }
+
     const timeoutId = setTimeout(() => {
-      if (universityQuery && !universitySelected) {
-        searchUniversities(universityQuery);
-      }
-    }, 300);
+      searchUniversities(universityQuery);
+    }, 500);
 
     return () => clearTimeout(timeoutId);
   }, [universityQuery, universitySelected, searchUniversities]);
@@ -157,10 +175,12 @@ export default function OnboardingForm() {
                               value={field.value === undefined || field.value === null ? "" : String(field.value)}
                               onChange={e => {
                                 const val = e.target.value === "" ? undefined : Number(e.target.value);
-                                field.onChange(val && val > 0 ? val : undefined);
+                                const semester = val && val > 0 ? val : undefined;
+                                field.onChange(semester);
+                                form.setValue("currentYear", semester ? Math.ceil(semester / 2) : undefined as any);
                               }}
                               min={1}
-                              max={10}
+                              max={8}
                             />
                           </FormControl>
                           <FormMessage />
@@ -178,12 +198,7 @@ export default function OnboardingForm() {
                               type="number"
                               placeholder="Current Year"
                               value={field.value === undefined || field.value === null ? "" : String(field.value)}
-                              onChange={e => {
-                                const val = e.target.value === "" ? undefined : Number(e.target.value);
-                                field.onChange(val && val > 0 ? val : undefined);
-                              }}
-                              min={1}
-                              max={6}
+                              disabled
                             />
                           </FormControl>
                           <FormMessage />
@@ -303,10 +318,12 @@ export default function OnboardingForm() {
                               value={field.value === undefined || field.value === null ? "" : String(field.value)}
                               onChange={e => {
                                 const val = e.target.value === "" ? undefined : Number(e.target.value);
-                                field.onChange(val && val > 0 ? val : undefined);
+                                const semester = val && val > 0 ? val : undefined;
+                                field.onChange(semester);
+                                form.setValue("currentYear", semester ? Math.ceil(semester / 2) : undefined as any);
                               }}
                               min={1}
-                              max={10}
+                              max={8}
                             />
                           </FormControl>
                           <FormMessage />
@@ -324,12 +341,7 @@ export default function OnboardingForm() {
                               type="number"
                               placeholder="Current Year"
                               value={field.value === undefined || field.value === null ? "" : String(field.value)}
-                              onChange={e => {
-                                const val = e.target.value === "" ? undefined : Number(e.target.value);
-                                field.onChange(val && val > 0 ? val : undefined);
-                              }}
-                              min={1}
-                              max={6}
+                              disabled
                             />
                           </FormControl>
                           <FormMessage />
@@ -344,7 +356,7 @@ export default function OnboardingForm() {
                       <FormItem>
                         <FormLabel>University Name</FormLabel>
                         <FormControl>
-                          <Command className="w-full border rounded-md">
+                          <Command className="w-full border rounded-md" shouldFilter={false}>
                             <CommandInput
                               placeholder="Type to search university..."
                               value={universityQuery} onValueChange={(val) => {
@@ -362,7 +374,7 @@ export default function OnboardingForm() {
                                   <Loader className="h-4 w-4 animate-spin" /> Searching...
                                 </div>
                               )}
-                              {!loadingUniversity && universityOptions.length === 0 && universityQuery.length > 2 && !universitySelected && (
+                              {!loadingUniversity && universityOptions.length === 0 && universityQuery.length > 0 && !universitySelected && (
                                 <CommandEmpty>No results found</CommandEmpty>
                               )}
                               {universityOptions.map((item, idx) => (

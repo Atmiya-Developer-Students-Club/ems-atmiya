@@ -180,7 +180,12 @@ export function StudentForm({ setIsFormOpen }: { isFormOpen: boolean; setIsFormO
               <FormItem>
                 <FormLabel>Current Semester</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} placeholder="Semester" />
+                  <Input type="number" {...field} placeholder="Semester" onChange={e => {
+                    field.onChange(e);
+                    const val = e.target.value === "" ? undefined : Number(e.target.value);
+                    const semester = val && val > 0 ? val : undefined;
+                    form.setValue("currentYear", semester ? Math.ceil(semester / 2) : undefined);
+                  }} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -189,12 +194,12 @@ export function StudentForm({ setIsFormOpen }: { isFormOpen: boolean; setIsFormO
           <FormField
             control={form.control}
             name="currentYear"
-            disabled={loading}
+            disabled
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Current Year</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} placeholder="Year" />
+                  <Input type="number" {...field} placeholder="Year" disabled />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -233,7 +238,7 @@ export function StudentForm({ setIsFormOpen }: { isFormOpen: boolean; setIsFormO
         </div>
 
         <Turnstile
-          siteKey="0x4AAAAAABeFnZ4TqqZ1FHIk"
+          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
           onSuccess={(token) => {
             setCaptchaToken(token);
           }}

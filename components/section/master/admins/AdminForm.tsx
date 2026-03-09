@@ -186,7 +186,7 @@ export function AdminForm() {
         />
 
         <Turnstile
-          siteKey="0x4AAAAAABeFnZ4TqqZ1FHIk"
+          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
           onSuccess={(token) => {
             setCaptchaToken(token);
           }}
