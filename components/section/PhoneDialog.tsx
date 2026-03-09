@@ -42,15 +42,22 @@ export function PhoneDialog() {
 
   const handleSubmit = async (values: PhoneFormValues) => {
     setSubmitting(true);
-    const res = await updatePhone(values.phone);
-    if (res.success) {
-      refreshUser();
-      toast.success("Phone number updated successfully.");
-      setOpen(false);
-    } else {
-      toast.error("Failed to update phone number. Please try again.", { description: res.error });
+    try {
+      const res = await updatePhone(values.phone);
+      if (res.success) {
+        await refreshUser();
+        toast.success("Phone number updated successfully.");
+        setOpen(false);
+      } else {
+        toast.error(res.error ?? "Failed to update phone number. Please try again.");
+        form.reset();
+      }
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+      form.reset();
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   return (
