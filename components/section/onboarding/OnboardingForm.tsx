@@ -2,7 +2,7 @@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Command, CommandInput, CommandList, CommandItem, CommandEmpty } from "@/components/ui/command";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { onboardingStudentSchema, OnboardingStudentSchema } from "@/schemas/onboardingStudentSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -87,6 +87,14 @@ export default function OnboardingForm() {
       universityName: "",
     } as any,
   });
+
+  const selectedDepartmentId = form.watch("departmentId");
+
+  const filteredPrograms = useMemo(() => {
+    if (!selectedDepartmentId) return [];
+    const dept = departments.find((d) => d.id === selectedDepartmentId);
+    return dept?.programs ?? [];
+  }, [selectedDepartmentId, departments]);
 
   async function onSubmit(data: OnboardingStudentSchema) {
     const response = await onboardingStudent(data);
@@ -241,7 +249,13 @@ export default function OnboardingForm() {
                             <PopoverContent>Select your department. If your department is not listed, please select the closest match.</PopoverContent>
                           </Popover>
                         </div>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} >
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            form.setValue("programId", "" as any);
+                          }}
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select a department" />
@@ -273,20 +287,18 @@ export default function OnboardingForm() {
                             <PopoverContent>Select your program. If your program is not listed, please select the closest match.</PopoverContent>
                           </Popover>
                         </div>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value ?? ""} disabled={!selectedDepartmentId}>
                           <FormControl>
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select a program" />
+                              <SelectValue placeholder={selectedDepartmentId ? "Select a program" : "Select a department first"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {departments.map((department) =>
-                              department.programs?.map((program) => (
-                                <SelectItem key={program.id} value={program.id}>
-                                  {program.name}
-                                </SelectItem>
-                              ))
-                            )}
+                            {filteredPrograms.map((program) => (
+                              <SelectItem key={program.id} value={program.id}>
+                                {program.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />

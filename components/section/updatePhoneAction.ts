@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin-server";
+import { prisma } from "@/lib/prisma";
 
 export async function updatePhone(phone: string) {
   if (!phone || !/^\d{10}$/.test(phone)) {
@@ -22,8 +23,24 @@ export async function updatePhone(phone: string) {
     return { success: true };
   }
 
+  // Check if phone number is already used by another user
+  const existingUser = await prisma.user.findUnique({
+    where: { phone },
+    select: { supabaseId: true },
+  });
+
+  if (existingUser && existingUser.supabaseId !== user.id) {
+    return { error: "This phone number is already registered to another account." };
+  }
+
   try {
-    // Update Supabase metadata first (more reliable, and what PhoneDialog checks)
+    // Update Prisma DB first to catch unique constraint issues
+    await prisma.user.update({
+      where: { supabaseId: user.id },
+      data: { phone },
+    });
+
+    // Then update Supabase metadata
     const adminSupabase = await createAdminClient();
     const { error } = await adminSupabase.auth.admin.updateUserById(user.id, {
       user_metadata: {
@@ -33,23 +50,12 @@ export async function updatePhone(phone: string) {
     });
     if (error) {
       console.error("Supabase metadata update error:", error);
+      // Rollback Prisma update
+      await prisma.user.update({
+        where: { supabaseId: user.id },
+        data: { phone: null },
+      });
       return { error: "Failed to update phone number." };
-    }
-
-    // Best-effort sync to Prisma DB (dynamic import to avoid module-level DB connection)
-    try {
-      const { prisma } = await import("@/lib/prisma");
-      await Promise.race([
-        prisma.user.update({
-          where: { supabaseId: user.id },
-          data: { phone },
-        }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("DB sync timeout")), 5000)
-        ),
-      ]);
-    } catch (dbError) {
-      console.error("Prisma phone sync failed (phone saved in Supabase):", dbError);
     }
 
     return { success: true };
