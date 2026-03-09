@@ -144,15 +144,15 @@ export const template = `<!DOCTYPE html>
       </div>
 
       <div >
-          <p class="button"><a class="" href="https://events.adsc-atmiya.in/hackathons/{{HACKATHON_ID}}" target="_blank">View Hackathon Details</a></p>
-      <p class="button"><a class="" href="https://events.adsc-atmiya.in/register" target="_blank">Register Now</a></p>
+          <p class="button"><a class="" href="https://events-adsc-atmiya.vercel.app/hackathons/{{HACKATHON_ID}}" target="_blank">View Hackathon Details</a></p>
+      <p class="button"><a class="" href="https://events-adsc-atmiya.vercel.app/register" target="_blank">Register Now</a></p>
       </div>
 
       <!-- Step-by-Step Guide -->
       <div class="steps">
         <h3>👉 How to Register & Respond to Your Invitation:</h3>
         <ol>
-          <li>Go to <a href="https://events.adsc-atmiya.in/register" target="_blank">EMS Sign Up</a> page.</li>
+          <li>Go to <a href="https://events-adsc-atmiya.vercel.app/register" target="_blank">EMS Sign Up</a> page.</li>
           <li>Create your account using your email, name, and password.</li>
           <li>Check your inbox (or spam folder) and verify your email.</li>
           <li>Log in to EMS using your new credentials.</li>
