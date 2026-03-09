@@ -29,8 +29,8 @@ export async function editTeamAction(input: unknown) {
     await prisma.hackathonTeam.update({
       where: { id: data.id },
       data: {
-        mentor: data.mentor || "Not Assigned",
-        mentor_mail: data.mentor_mail || "unassigned@example.com",
+        mentor: data.mentor,
+        mentor_mail: data.mentor_mail,
         disqualified: data.disqualified,
         problemStatementId: data.problemStatementId || null,
         teamName: data.teamName,
