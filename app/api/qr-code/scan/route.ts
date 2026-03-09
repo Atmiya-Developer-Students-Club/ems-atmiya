@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { QRCodeService, QRCodeData } from '@/lib/qr-code';
+import { PrismaClient } from '@prisma/client';
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
