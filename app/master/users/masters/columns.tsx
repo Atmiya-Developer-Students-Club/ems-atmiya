@@ -13,15 +13,18 @@ export type Master = {
 
 export const columns: ColumnDef<Master>[] = [
   {
-    accessorKey: "user.firstName",
+    id: "firstName",
+    accessorFn: (row) => row.user.firstName,
     header: "First Name",
   },
   {
-    accessorKey: "user.lastName",
+    id: "lastName",
+    accessorFn: (row) => row.user.lastName,
     header: "Last Name",
   },
   {
-    accessorKey: "user.email",
+    id: "email",
+    accessorFn: (row) => row.user.email,
     header: "Email",
   },
   {

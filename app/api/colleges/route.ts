@@ -32,12 +32,25 @@ export async function GET(req: NextRequest) {
 
     // Extract only college names (3rd element in each array)
     const collegeNames = data.map(item => item[2]);
-    collegeNames.sort((a, b) => a.localeCompare(b));
-
     collegeNames.push('R.K. University');
     collegeNames.push('Ganpat University');
 
-    return NextResponse.json({ colleges: collegeNames });
+    // Sort by relevance: starts-with matches first, then contains, alphabetically within each group
+    const lowerKeyword = keyword.toLowerCase();
+    collegeNames.sort((a, b) => {
+      const aLower = a.toLowerCase();
+      const bLower = b.toLowerCase();
+      const aStarts = aLower.startsWith(lowerKeyword);
+      const bStarts = bLower.startsWith(lowerKeyword);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+      return a.localeCompare(b);
+    });
+
+    // Limit results for better UX
+    const limited = collegeNames.slice(0, 20);
+
+    return NextResponse.json({ colleges: limited });
   } catch (error) {
     console.error('Error fetching colleges:', error);
     return NextResponse.json({ error: 'Failed to fetch colleges' }, { status: 500 });

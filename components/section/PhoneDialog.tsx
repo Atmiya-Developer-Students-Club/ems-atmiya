@@ -19,8 +19,8 @@ type PhoneFormValues = z.infer<typeof phoneSchema>;
 
 export function PhoneDialog() {
   const [open, setOpen] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const { user, refreshUser } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const { user, loading, refreshUser } = useAuth();
 
   useEffect(() => {
     if (!open && !user?.user_metadata.phone) {
@@ -37,10 +37,11 @@ export function PhoneDialog() {
     defaultValues: { phone: "" },
   });
 
-  if (!user || user.user_metadata.phone) return null;
+  // Wait for fresh user data (getUser) before deciding to show the dialog
+  if (loading || !user || user.user_metadata.phone) return null;
 
   const handleSubmit = async (values: PhoneFormValues) => {
-    setLoading(true);
+    setSubmitting(true);
     const res = await updatePhone(values.phone);
     if (res.success) {
       refreshUser();
@@ -49,7 +50,7 @@ export function PhoneDialog() {
     } else {
       toast.error("Failed to update phone number. Please try again.", { description: res.error });
     }
-    setLoading(false);
+    setSubmitting(false);
   };
 
   return (
@@ -70,15 +71,15 @@ export function PhoneDialog() {
                 <FormItem>
                   <FormLabel>Phone Number</FormLabel>
                   <FormControl>
-                    <Input type="text" maxLength={10} placeholder="Enter your phone number" disabled={loading} {...field} />
+                    <Input type="text" maxLength={10} placeholder="Enter your phone number" disabled={submitting} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter className="mt-4">
-              <Button type="submit" disabled={loading}>
-                {loading ? "Saving..." : "Save"}
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Saving..." : "Save"}
               </Button>
             </DialogFooter>
           </form>

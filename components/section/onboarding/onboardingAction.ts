@@ -24,8 +24,43 @@ export async function onboardingStudent(data: OnboardingStudentSchema) {
   }
 
   try {
+    // Ensure User record exists in Prisma DB (fallback if webhook didn't fire)
+    const existingUser = await prisma.user.findUnique({
+      where: { supabaseId: user.id },
+    });
+
+    if (!existingUser) {
+      const fullName = user.user_metadata?.full_name || "";
+      const nameParts = fullName.trim().split(/\s+/);
+      const firstName = nameParts[0] || user.email?.split("@")[0] || "";
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "user";
+
+      await prisma.user.create({
+        data: {
+          supabaseId: user.id,
+          email: user.email!,
+          firstName,
+          lastName,
+          role: "STUDENT",
+          students: {
+            create: {},
+          },
+        },
+      });
+    }
+
     if (validatedData.data.studentType === "atmiya") {
       const { departmentId, programId, currentSemester, currentYear, registrationNumber } = validatedData.data;
+
+      if (registrationNumber) {
+        const existing = await prisma.student.findUnique({
+          where: { registrationNumber },
+        });
+        if (existing && existing.userId !== user.id) {
+          return { error: true, message: "A student with this registration number already exists." };
+        }
+      }
+
       await prisma.student.upsert({
         where: {
           userId: user.id,

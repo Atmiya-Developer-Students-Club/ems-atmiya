@@ -56,8 +56,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (mounted) {
-          setUser(session?.user ?? null);
-          setLoading(false);
+          if (event === 'SIGNED_OUT') {
+            setUser(null);
+            setLoading(false);
+          } else if (event !== 'INITIAL_SESSION') {
+            // For TOKEN_REFRESHED, SIGNED_IN, etc., fetch fresh user data
+            // to ensure user_metadata (e.g. phone) is up-to-date
+            const { data: { user: freshUser } } = await supabase.auth.getUser();
+            if (mounted) {
+              setUser(freshUser ?? session?.user ?? null);
+              setLoading(false);
+            }
+          }
         }
       }
     );
