@@ -192,7 +192,7 @@ export function CreateTeamForm({ hackathon, userIsRegistered, onTeamCreated, tri
               name="mentor"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Mentor Name (Optional)</FormLabel>
+                  <FormLabel>Mentor Name*</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter mentor's name" {...field} />
                   </FormControl>
