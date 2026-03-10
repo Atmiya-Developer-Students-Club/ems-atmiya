@@ -591,14 +591,16 @@ export function TeamManagement({
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <p className="font-medium">
-                      {qrData.user.firstName} {qrData.user.lastName}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {qrData.user.email}
-                    </p>
-                  </div>
+                  {qrData.user && (
+                    <div className="space-y-2">
+                      <p className="font-medium">
+                        {qrData.user.firstName} {qrData.user.lastName}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {qrData.user.email}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex gap-2 justify-center">
                     <Button

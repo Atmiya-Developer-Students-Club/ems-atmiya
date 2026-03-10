@@ -34,11 +34,53 @@ export async function updatePhone(phone: string) {
   }
 
   try {
-    // Update Prisma DB first to catch unique constraint issues
-    await prisma.user.update({
+    // Ensure User record exists in Prisma DB (it may not exist yet during onboarding)
+    // Check by supabaseId first, then fall back to email (record may exist with different supabaseId)
+    let userRecord = await prisma.user.findUnique({
       where: { supabaseId: user.id },
-      data: { phone },
     });
+
+    if (!userRecord && user.email) {
+      userRecord = await prisma.user.findUnique({
+        where: { email: user.email },
+      });
+
+      if (userRecord) {
+        // Record exists by email but supabaseId doesn't match — update the supabaseId
+        await prisma.user.update({
+          where: { email: user.email },
+          data: { supabaseId: user.id, phone },
+        });
+      }
+    }
+
+    if (!userRecord) {
+      // User record doesn't exist at all — create it
+      const fullName = user.user_metadata?.full_name || "";
+      const nameParts = fullName.trim().split(/\s+/);
+      const firstName = nameParts[0] || user.email?.split("@")[0] || "";
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+
+      await prisma.user.create({
+        data: {
+          supabaseId: user.id,
+          email: user.email!,
+          firstName,
+          lastName,
+          role: "STUDENT",
+          phone,
+          students: {
+            create: {},
+          },
+        },
+      });
+    } else if (userRecord.supabaseId === user.id) {
+      // Normal case — record exists and supabaseId matches
+      await prisma.user.update({
+        where: { supabaseId: user.id },
+        data: { phone },
+      });
+    }
 
     // Then update Supabase metadata
     const adminSupabase = await createAdminClient();
