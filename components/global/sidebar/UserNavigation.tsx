@@ -111,7 +111,7 @@ export function UserNavigation({
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
               <LogOut color="red" />
-              <p className="text-red-500">{isLoggingOut ? "Logging out..." : "Logout"}</p>
+              <span className="text-red-500">{isLoggingOut ? "Logging out..." : "Logout"}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
