@@ -29,9 +29,10 @@ import { Button } from "@/components/ui/button";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { editTeamSchema, EditTeamInput } from "@/schemas/team";
-import { editTeamAction } from "./actions";
+import { editTeamAction, deleteTeamAction } from "./actions";
 import useSWR from "swr";
 import { fetcher } from "@/fetcher";
+import { toast } from "sonner";
 
 export default function MasterHackathonDetailPage() {
   const params = useParams();
@@ -158,6 +159,32 @@ export default function MasterHackathonDetailPage() {
     }
   };
 
+  const handleDeleteTeam = async (team: any) => {
+    if (!confirm(`Are you sure you want to delete team "${team.teamName}"? This will remove all members, invites, and attendance records. This action cannot be undone.`)) {
+      return;
+    }
+    const loadingToast = toast.loading("Deleting team...");
+    try {
+      const result = await deleteTeamAction(team.id);
+      toast.dismiss(loadingToast);
+      if (result.success) {
+        toast.success(`Team "${team.teamName}" deleted successfully`);
+        // Remove team from local state
+        if (hackathonData) {
+          setHackathonData({
+            ...hackathonData,
+            teams: hackathonData.teams.filter((t) => t.id !== team.id),
+          });
+        }
+      } else {
+        toast.error(typeof result.error === "string" ? result.error : "Failed to delete team");
+      }
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error("An error occurred while deleting the team");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 px-2 sm:px-4">
@@ -213,6 +240,7 @@ export default function MasterHackathonDetailPage() {
         hackathon={hackathonData}
         onTeamClick={handleTeamClick}
         onEditTeamClick={handleEditTeamClick}
+        onDeleteTeam={handleDeleteTeam}
       />
       {/* View Team Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

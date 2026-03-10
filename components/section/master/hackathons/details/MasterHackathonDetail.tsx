@@ -28,7 +28,8 @@ import {
   List,
   Plus,
   Trash2,
-  Loader2
+  Loader2,
+  MoreHorizontal
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -148,6 +149,7 @@ export interface MasterHackathonDetailProps {
   };
   onTeamClick?: (team: HackathonTeam) => void;
   onEditTeamClick?: (team: HackathonTeam) => void;
+  onDeleteTeam?: (team: HackathonTeam) => void;
 }
 
 // Schema for attendance schedule form
@@ -162,7 +164,8 @@ type AttendanceScheduleFormValues = z.infer<typeof attendanceScheduleSchema>;
 export default function MasterHackathonDetail({
   hackathon,
   onTeamClick,
-  onEditTeamClick, 
+  onEditTeamClick,
+  onDeleteTeam,
 }: MasterHackathonDetailProps) {
   const [activeTab, setActiveTab] = useState("details");
   const [isExporting, setIsExporting] = useState(false);
@@ -1138,32 +1141,32 @@ export default function MasterHackathonDetail({
                 </CardHeader>
                 <CardContent>
                   {hackathon.teams && hackathon.teams.length > 0 ? (
-                    <div className="rounded-md border overflow-x-auto">
-                      <Table className="min-w-[600px]">
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Team Name</TableHead>
-                            <TableHead>Problem Statement</TableHead>
-                            <TableHead>Members</TableHead>
-                            <TableHead>Submission</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
+                    <div className="rounded-md border max-h-[500px] overflow-auto">
+                      <table className="w-full caption-bottom text-sm min-w-[700px]">
+                        <thead className="sticky top-0 bg-background z-10 [&_tr]:border-b">
+                          <tr className="border-b transition-colors hover:bg-muted/50">
+                            <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Team Name</th>
+                            <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Problem Statement</th>
+                            <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Members</th>
+                            <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Submission</th>
+                            <th className="h-10 px-2 text-right align-middle font-medium text-muted-foreground">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="[&_tr:last-child]:border-0">
                           {(hackathon.teams.filter(team =>
                             team.teamName.toLowerCase().includes(teamSearch.toLowerCase())
                           )).map((team) => (
-                            <TableRow key={team.id}>
-                              <TableCell className="font-medium">
+                            <tr key={team.id} className="border-b transition-colors hover:bg-muted/50">
+                              <td className="p-2 align-middle font-medium">
                                 {team.teamName}
-                              </TableCell>
-                              <TableCell>
+                              </td>
+                              <td className="p-2 align-middle">
                                 {team.problemStatement ?
                                   `${team.problemStatement.code}: ${team.problemStatement.title}` :
                                   "Not selected"}
-                              </TableCell>
-                              <TableCell>{team.members.length}</TableCell>
-                              <TableCell>
+                              </td>
+                              <td className="p-2 align-middle">{team.members.length}</td>
+                              <td className="p-2 align-middle">
                                 {team.submissionUrl ? (
                                   <Button variant="link" asChild size="sm" className="p-0 h-auto">
                                     <a href={team.submissionUrl} target="_blank" rel="noopener noreferrer">
@@ -1173,23 +1176,35 @@ export default function MasterHackathonDetail({
                                 ) : (
                                   <span className="text-muted-foreground">No submission yet</span>
                                 )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex gap-2 justify-end">
-                                  <Button variant="ghost" size="sm" onClick={() => onTeamClick && onTeamClick(team)}>
-                                    <Eye className="h-4 w-4 mr-1" />
-                                    View Team
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => onEditTeamClick && onEditTeamClick(team)}>
-                                    <Edit className="h-4 w-4 mr-1" />
-                                    Edit Team
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
+                              </td>
+                              <td className="p-2 align-middle text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">Actions</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => onTeamClick && onTeamClick(team)}>
+                                      <Eye className="h-4 w-4 mr-2" />
+                                      View Team
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => onEditTeamClick && onEditTeamClick(team)}>
+                                      <Edit className="h-4 w-4 mr-2" />
+                                      Edit Team
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDeleteTeam && onDeleteTeam(team)}>
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete Team
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </td>
+                            </tr>
                           ))}
-                        </TableBody>
-                      </Table>
+                        </tbody>
+                      </table>
                     </div>
                   ) : (
                     <div className="text-center py-10">

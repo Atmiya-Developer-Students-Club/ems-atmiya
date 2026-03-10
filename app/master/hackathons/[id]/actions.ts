@@ -3,6 +3,26 @@
 import { editTeamSchema } from "@/schemas/team";
 import { prisma } from "@/lib/prisma";
 
+export async function deleteTeamAction(teamId: string) {
+  if (!teamId || typeof teamId !== "string") {
+    return { error: "Invalid team ID" };
+  }
+  try {
+    const team = await prisma.hackathonTeam.findUnique({
+      where: { id: teamId },
+    });
+    if (!team) return { error: "Team not found" };
+
+    await prisma.hackathonTeam.delete({
+      where: { id: teamId },
+    });
+
+    return { success: true };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
 export async function editTeamAction(input: unknown) {
   const parsed = editTeamSchema.safeParse(input);
   if (!parsed.success) {
