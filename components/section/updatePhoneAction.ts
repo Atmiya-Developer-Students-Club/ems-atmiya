@@ -23,6 +23,33 @@ export async function updatePhone(phone: string) {
     return { success: true };
   }
 
+  // Ensure User record exists in Prisma DB (fallback if webhook didn't fire)
+  const currentUser = await prisma.user.findUnique({
+    where: { supabaseId: user.id },
+  });
+
+  if (!currentUser) {
+    const fullName = user.user_metadata?.full_name || "";
+    const nameParts = fullName.trim().split(/\s+/);
+    const firstName = nameParts[0] || user.email?.split("@")[0] || "";
+    const lastName =
+      nameParts.length > 1 ? nameParts.slice(1).join(" ") : "user";
+
+    await prisma.user.create({
+      data: {
+        supabaseId: user.id,
+        email: user.email!,
+        firstName,
+        lastName,
+        role: "STUDENT",
+        students: {
+          create: {},
+        },
+      },
+    });
+  }
+
+  
   // Check if phone number is already used by another user
   const existingUser = await prisma.user.findUnique({
     where: { phone },
