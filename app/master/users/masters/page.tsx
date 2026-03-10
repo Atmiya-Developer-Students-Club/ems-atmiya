@@ -12,10 +12,11 @@ import { createMasterDialogAtom } from "@/store/form-dialog";
 import { Heading } from "@/components/global/heading/Heading";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { columns, Master } from "./columns";
+import { getColumns, Master } from "./columns";
 
 export default function Page() {
-  const { data, isLoading, error } = useSWR<Master[]>("/api/master", fetcher);
+  const { data, isLoading, error, mutate } = useSWR<Master[]>("/api/master", fetcher);
+  const columns = getColumns(mutate);
   const setCurrentBreadcrumbs = useSetAtom(sidebarBreadcrumbs);
   const setCreateDialog = useSetAtom(createMasterDialogAtom);
 
@@ -27,7 +28,7 @@ export default function Page() {
     ]);
   });
 
-  if (error) return <p>Error: {error}</p>;
+  if (error) return <p>Error: {String(error)}</p>;
 
   return (
     <>
