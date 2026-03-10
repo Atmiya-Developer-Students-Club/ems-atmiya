@@ -21,7 +21,16 @@ export async function POST(request: NextRequest) {
 
     // Get the student associated with the user
     const student = await prisma.student.findUnique({
-      where: { userId: user.id }
+      where: { userId: user.id },
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      }
     });
 
     if (!student) {
@@ -47,7 +56,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         message: 'QR code already exists',
         qrCode: teamMember.qrCode,
-        qrCodeData: teamMember.qrCodeData
+        qrCodeData: teamMember.qrCodeData,
+        user: {
+          firstName: student.user.firstName,
+          lastName: student.user.lastName,
+          email: student.user.email
+        }
       });
     }
 
@@ -68,7 +82,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: 'QR code generated successfully',
       qrCode,
-      qrCodeData
+      qrCodeData,
+      user: {
+        firstName: student.user.firstName,
+        lastName: student.user.lastName,
+        email: student.user.email
+      }
     });
 
   } catch (error) {

@@ -16,7 +16,7 @@ export default function HackathonDetailPage() {
     userTeam?: HackathonTeam;
     pendingInvites?: { teamId: string; teamName: string }[];
   };
-  const { user: authUser } = useAuth();
+  const { user: authUser, loading: authLoading } = useAuth();
 
   // Fetch hackathon data
   const {
@@ -52,7 +52,7 @@ export default function HackathonDetailPage() {
   );
 
   // Loading state
-  if (hackathonLoading || (authUser && userLoading)) {
+  if (hackathonLoading || authLoading || (authUser && userLoading)) {
     return (
       <div className="container mx-auto py-8 px-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
