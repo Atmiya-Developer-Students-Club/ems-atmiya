@@ -1,6 +1,7 @@
 "use client";
 
 import { Provider } from "jotai";
+import { SWRConfig } from "swr";
 import { ThemeProvider } from "./ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useEffect } from "react";
@@ -13,11 +14,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <Provider>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
-      </ThemeProvider>
+      <SWRConfig value={{
+        shouldRetryOnError: true,
+        errorRetryCount: 3,
+        errorRetryInterval: 2000,
+      }}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ThemeProvider>
+      </SWRConfig>
     </Provider>
   );
 }
