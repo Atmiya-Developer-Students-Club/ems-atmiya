@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function UserNavigation({
@@ -36,15 +36,22 @@ export function UserNavigation({
   const supabase = createClient();
   const router = useRouter();
   const { user: authUser } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
-    const response = await supabase.auth.signOut();
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      const response = await supabase.auth.signOut();
 
-    if (response.error) {
-      toast.error(response.error.message);
-    } else {
-      toast.success("Successfully logged out.");
-      router.replace("/");
+      if (response.error) {
+        console.error("Error signing out:", response.error);
+      }
+
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Unexpected error during logout:", error);
+      window.location.href = "/";
     }
   };
 
@@ -102,9 +109,9 @@ export function UserNavigation({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
               <LogOut color="red" />
-              <p className="text-red-500">Logout</p>
+              <p className="text-red-500">{isLoggingOut ? "Logging out..." : "Logout"}</p>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

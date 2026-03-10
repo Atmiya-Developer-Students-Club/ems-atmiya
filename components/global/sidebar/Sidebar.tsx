@@ -75,8 +75,8 @@ export function AppSidebar({ role, links }: AppSidebarProps) {
         ))}
       </SidebarContent>
       <SidebarRail />
-      {user && (
-        <SidebarFooter>
+      <SidebarFooter>
+        {user && (
           <UserNavigation
             user={{
               name: user.user_metadata.full_name,
@@ -84,8 +84,8 @@ export function AppSidebar({ role, links }: AppSidebarProps) {
               avatar: user.user_metadata.avatar_url,
             }}
           />
-        </SidebarFooter>
-      )}
+        )}
+      </SidebarFooter>
     </Sidebar>
   );
 }
