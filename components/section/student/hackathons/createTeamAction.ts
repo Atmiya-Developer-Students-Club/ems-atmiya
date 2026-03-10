@@ -121,6 +121,17 @@ export async function createTeamAction(teamData: TeamSchema, hackathonId: string
       return { error: "Invalid problem statement" };
     }
 
+    // Generate sequential teamId for this hackathon
+    const lastTeam = await prisma.hackathonTeam.findFirst({
+      where: { hackathonId, teamId: { not: null } },
+      orderBy: { teamId: "desc" },
+      select: { teamId: true },
+    });
+    const nextNum = lastTeam?.teamId
+      ? parseInt(lastTeam.teamId.replace("TM", ""), 10) + 1
+      : 1;
+    const newTeamId = `TM${String(nextNum).padStart(3, "0")}`;
+
     // Create team and add the creator as a member
     const team = await prisma.hackathonTeam.create({
       data: {
@@ -130,6 +141,7 @@ export async function createTeamAction(teamData: TeamSchema, hackathonId: string
         mentor,
         mentor_mail: mentorMail,
         leaderId: student.id,
+        teamId: newTeamId,
         members: {
           create: {
             studentId: student.id,
