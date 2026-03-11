@@ -3,6 +3,7 @@
 import { teamSchema, TeamSchema } from "@/schemas/hackathon";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { QRCodeService } from "@/lib/qr-code";
 
 export async function createTeamAction(teamData: TeamSchema, hackathonId: string) {
   const supabase = await createClient();
@@ -149,6 +150,31 @@ export async function createTeamAction(teamData: TeamSchema, hackathonId: string
         },
       },
     });
+
+    // Auto-generate QR code for the team creator
+    try {
+      const { qrCode, qrCodeData } = await QRCodeService.generateTeamMemberQRCode(
+        student.id,
+        team.id,
+        hackathonId
+      );
+      const creatorMember = await prisma.hackathonTeamMember.findUnique({
+        where: {
+          teamId_studentId: {
+            teamId: team.id,
+            studentId: student.id,
+          },
+        },
+      });
+      if (creatorMember) {
+        await prisma.hackathonTeamMember.update({
+          where: { id: creatorMember.id },
+          data: { qrCode, qrCodeData },
+        });
+      }
+    } catch (qrError) {
+      console.error("Failed to auto-generate QR code for team creator:", qrError);
+    }
 
     return {
       success: true,
