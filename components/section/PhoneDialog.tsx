@@ -10,6 +10,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { usePathname } from "next/navigation";
 
 const phoneSchema = z.object({
   phone: z.string().length(10, "Phone number must be exactly 10 digits").regex(/^\d{10}$/, "Phone number must be numeric")
@@ -21,16 +22,20 @@ export function PhoneDialog() {
   const [open, setOpen] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const { user, loading, refreshUser } = useAuth();
+  const pathname = usePathname();
+
+  // Don't show the dialog on the onboarding page — phone is collected there
+  const isOnboarding = pathname === "/onboarding";
 
   useEffect(() => {
-    if (!open && !user?.user_metadata.phone) {
+    if (!open && !user?.user_metadata.phone && !isOnboarding) {
       const id = setInterval(() => {
         setOpen(true);
       }, 5000);
       return () => clearInterval(id);
     }
     return undefined;
-  }, [open, user?.user_metadata.phone]);
+  }, [open, user?.user_metadata.phone, isOnboarding]);
 
   const form = useForm<PhoneFormValues>({
     resolver: zodResolver(phoneSchema),
@@ -38,7 +43,8 @@ export function PhoneDialog() {
   });
 
   // Wait for fresh user data (getUser) before deciding to show the dialog
-  if (loading || !user || user.user_metadata.phone) return null;
+  // Also skip if on onboarding page
+  if (loading || !user || user.user_metadata.phone || isOnboarding) return null;
 
   const handleSubmit = async (values: PhoneFormValues) => {
     setSubmitting(true);

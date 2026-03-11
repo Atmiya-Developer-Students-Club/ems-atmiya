@@ -23,6 +23,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = async () => {
     try {
+      // Refresh the session to get updated JWT (including app_metadata changes)
+      await supabase.auth.refreshSession();
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
     } catch (error) {

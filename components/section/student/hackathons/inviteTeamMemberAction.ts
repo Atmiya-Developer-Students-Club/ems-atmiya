@@ -38,6 +38,11 @@ export async function inviteTeamMemberAction(teamId: string, studentEmail: strin
       return { error: "Hackathon registrations are closed" };
     }
 
+    // Check if hackathon restricts to Atmiya students only
+    if (!team.hackathon.allow_external_students) {
+      // We'll validate the invited student later when we find their profile
+    }
+
     // Check if the current user is a member of the team
     const currentStudent = await prisma.student.findFirst({
       where: {
@@ -107,6 +112,11 @@ export async function inviteTeamMemberAction(teamId: string, studentEmail: strin
     }
 
     const invitedStudent = invitedUser.students;
+
+    // Check if hackathon restricts to Atmiya students only
+    if (!team.hackathon.allow_external_students && !invitedStudent.departmentId) {
+      return { error: "This hackathon is restricted to Atmiya University students only. External students cannot be invited." };
+    }
 
     // Check if student is already a member of the team
     const isAlreadyMember = team.members.some(

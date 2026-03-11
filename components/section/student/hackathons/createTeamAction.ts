@@ -3,6 +3,7 @@
 import { teamSchema, TeamSchema } from "@/schemas/hackathon";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { QRCodeService } from "@/lib/qr-code";
 
 export async function createTeamAction(teamData: TeamSchema, hackathonId: string) {
   const supabase = await createClient();
@@ -43,6 +44,19 @@ export async function createTeamAction(teamData: TeamSchema, hackathonId: string
 
     if (!student) {
       return { error: "Only students can create or join teams" };
+    }
+
+    // Check if hackathon restricts enrollment to Atmiya students only
+    const hackathonForRestriction = await prisma.hackathon.findUnique({
+      where: { id: hackathonId },
+      select: { allow_external_students: true },
+    });
+
+    if (hackathonForRestriction && !hackathonForRestriction.allow_external_students) {
+      // External students have `university` set and no `departmentId`
+      if (!student.departmentId) {
+        return { error: "This hackathon is restricted to Atmiya University students only" };
+      }
     }
 
     // Check if user is already in a team for this hackathon
@@ -149,6 +163,31 @@ export async function createTeamAction(teamData: TeamSchema, hackathonId: string
         },
       },
     });
+
+    // Auto-generate QR code for the team creator
+    try {
+      const { qrCode, qrCodeData } = await QRCodeService.generateTeamMemberQRCode(
+        student.id,
+        team.id,
+        hackathonId
+      );
+      const creatorMember = await prisma.hackathonTeamMember.findUnique({
+        where: {
+          teamId_studentId: {
+            teamId: team.id,
+            studentId: student.id,
+          },
+        },
+      });
+      if (creatorMember) {
+        await prisma.hackathonTeamMember.update({
+          where: { id: creatorMember.id },
+          data: { qrCode, qrCodeData },
+        });
+      }
+    } catch (qrError) {
+      console.error("Failed to auto-generate QR code for team creator:", qrError);
+    }
 
     return {
       success: true,

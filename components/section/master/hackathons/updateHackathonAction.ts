@@ -25,6 +25,9 @@ export async function updateHackathonAction(id: string, data: FormattedHackathon
     // Check if hackathon exists
     const existingHackathon = await prisma.hackathon.findUnique({
       where: { id },
+      include: {
+        problemStatements: true,
+      },
     });
 
     if (!existingHackathon) {
@@ -33,11 +36,46 @@ export async function updateHackathonAction(id: string, data: FormattedHackathon
 
     // Update the hackathon with transaction to ensure data consistency
     await prisma.$transaction(async (tx) => {
-      // Delete existing problem statements, rules
-      await tx.hackathonProblemStatement.deleteMany({
-        where: { hackathonId: id },
-      });
+      // --- Problem Statements: smart diff instead of delete-all ---
+      const existingPS = existingHackathon.problemStatements;
+      const incomingCodes = new Set(problemStatements.map((ps) => ps.code));
+      const existingCodes = new Set(existingPS.map((ps) => ps.code));
 
+      // Problem statements to delete (exist in DB but not in incoming data)
+      const psToDelete = existingPS.filter((ps) => !incomingCodes.has(ps.code));
+      // Problem statements to update (exist in both)
+      const psToUpdate = problemStatements.filter((ps) => existingCodes.has(ps.code));
+      // Problem statements to create (new ones not in DB)
+      const psToCreate = problemStatements.filter((ps) => !existingCodes.has(ps.code));
+
+      // Nullify problemStatementId on teams referencing deleted problem statements,
+      // then delete the problem statements
+      if (psToDelete.length > 0) {
+        const psIdsToDelete = psToDelete.map((ps) => ps.id);
+        await tx.hackathonTeam.updateMany({
+          where: { problemStatementId: { in: psIdsToDelete } },
+          data: { problemStatementId: null },
+        });
+        await tx.hackathonProblemStatement.deleteMany({
+          where: { id: { in: psIdsToDelete } },
+        });
+      }
+
+      // Update existing problem statements
+      for (const ps of psToUpdate) {
+        const existing = existingPS.find((e) => e.code === ps.code);
+        if (existing) {
+          await tx.hackathonProblemStatement.update({
+            where: { id: existing.id },
+            data: {
+              title: ps.title,
+              description: ps.description,
+            },
+          });
+        }
+      }
+
+      // --- Rules: safe to delete-all and recreate (no cascade risk) ---
       await tx.hackathonRules.deleteMany({
         where: { hackathonId: id },
       });
@@ -60,13 +98,14 @@ export async function updateHackathonAction(id: string, data: FormattedHackathon
           mode: validatedData.data.mode,
           status: validatedData.data.status,
           team_size_limit: validatedData.data.team_size_limit,
+          allow_external_students: validatedData.data.allow_external_students ?? true,
           organizer_name: validatedData.data.organizer_name,
           organizer_contact: validatedData.data.organizer_contact,
           tags: validatedData.data.tags || [],
           evaluationCriteria: validatedData.data.evaluationCriteria || [],
-          // Create new problem statements
+          // Create only new problem statements
           problemStatements: {
-            create: problemStatements.map((ps) => ({
+            create: psToCreate.map((ps) => ({
               code: ps.code,
               title: ps.title,
               description: ps.description,

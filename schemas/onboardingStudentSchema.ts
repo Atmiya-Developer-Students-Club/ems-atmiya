@@ -1,9 +1,14 @@
 import { z } from "zod";
 
 
+const phoneSchema = z.string({ required_error: "Phone number is required" })
+  .length(10, "Phone number must be exactly 10 digits")
+  .regex(/^\d{10}$/, "Phone number must contain only digits");
+
 export const onboardingStudentSchema = z.discriminatedUnion("studentType", [
   z.object({
     studentType: z.literal("atmiya"),
+    phone: phoneSchema,
     departmentId: z.string({ required_error: "Department ID is required" }).min(1, "Department ID is required"),
     programId: z.string({ required_error: "Program ID is required" }).min(1, "Program ID is required"),
     currentSemester: z.coerce
@@ -29,6 +34,7 @@ export const onboardingStudentSchema = z.discriminatedUnion("studentType", [
   }),
   z.object({
     studentType: z.literal("other"),
+    phone: phoneSchema,
     currentSemester: z.coerce
       .number({
         required_error: "Current semester is required",

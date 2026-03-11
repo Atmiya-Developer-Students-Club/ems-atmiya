@@ -49,6 +49,7 @@ export async function createHackathonAction(data: FormattedHackathonSchema) {
         mode: validatedData.data.mode,
         status: validatedData.data.status,
         team_size_limit: validatedData.data.team_size_limit,
+        allow_external_students: validatedData.data.allow_external_students ?? true,
         organizer_name: validatedData.data.organizer_name,
         organizer_contact: validatedData.data.organizer_contact,
         tags: validatedData.data.tags || [],

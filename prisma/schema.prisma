@@ -182,6 +182,7 @@ model Hackathon {
   team_size_limit         Int?
   open_submissions        Boolean                       @default(true)
   open_registrations      Boolean                       @default(true)
+  allow_external_students Boolean                       @default(true)
   created_at              DateTime                      @default(now())
   updated_at              DateTime                      @updatedAt
   qrCode                  String?
@@ -225,7 +226,7 @@ model HackathonTeam {
   submissionUrl            String?
   leaderId                 String?
   hackathon                Hackathon                  @relation(fields: [hackathonId], references: [id])
-  problemStatement         HackathonProblemStatement? @relation(fields: [problemStatementId], references: [id], onDelete: Cascade)
+  problemStatement         HackathonProblemStatement? @relation(fields: [problemStatementId], references: [id], onDelete: SetNull)
   leader                   Student?                   @relation("TeamLeader", fields: [leaderId], references: [id])
   invites                  HackathonTeamInvite[]
   members                  HackathonTeamMember[]

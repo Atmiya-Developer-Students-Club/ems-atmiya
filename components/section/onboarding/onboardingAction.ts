@@ -109,16 +109,18 @@ export async function onboardingStudent(data: OnboardingStudentSchema) {
       });
     }
 
+    const { phone } = validatedData.data;
+
     // Generate QR code for the user
-    // Generate new QR code for the user
     const { qrCode, qrCodeData } = await QRCodeService.generateUserQRCode(user.id);
 
-    // Update user with QR code
+    // Update user with QR code and phone
     await prisma.user.update({
       where: { supabaseId: user.id },
       data: {
         qrCode,
-        qrCodeData
+        qrCodeData,
+        phone,
       }
     });
 
@@ -151,7 +153,12 @@ export async function onboardingStudent(data: OnboardingStudentSchema) {
       }
     }
 
+    // Single call to update both user_metadata (phone) and app_metadata (onboarding)
     await adminSupabase.auth.admin.updateUserById(user.id, {
+      user_metadata: {
+        ...user.user_metadata,
+        phone,
+      },
       app_metadata: {
         role: "STUDENT",
         onboarding_complete: true,

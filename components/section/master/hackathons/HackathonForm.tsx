@@ -23,6 +23,7 @@ import { Progress } from "@/components/ui/progress";
 import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { X, Plus, Info, MapPin, Clock, User, Link, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -114,6 +115,7 @@ export default function HackathonForm({ id }: HackathonFormProps) {
       mode: "OFFLINE" as const,
       status: "UPCOMING" as const,
       team_size_limit: 5,
+      allow_external_students: true,
       organizer_name: "",
       organizer_contact: "",
       rules: [""],
@@ -161,6 +163,7 @@ export default function HackathonForm({ id }: HackathonFormProps) {
           mode: hackathonData.mode || "OFFLINE",
           status: hackathonData.status || "UPCOMING",
           team_size_limit: hackathonData.team_size_limit || 5,
+          allow_external_students: hackathonData.allow_external_students ?? true,
           organizer_name: hackathonData.organizer_name || "",
           organizer_contact: hackathonData.organizer_contact || "",
         });
@@ -1332,6 +1335,31 @@ export default function HackathonForm({ id }: HackathonFormProps) {
                       </FormItem>
                     )}
                   />
+
+                  <Separator />
+
+                  <FormField
+                    control={form.control}
+                    name="allow_external_students"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Allow External Students</FormLabel>
+                          <FormDescription>
+                            When enabled, students from any university can enroll. When disabled, only Atmiya University students can participate.
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <Separator />
 
                   <div className="space-y-4">
                     <h3 className="font-medium">Tags</h3>

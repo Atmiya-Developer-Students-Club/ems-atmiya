@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useDepartment } from "@/hooks/useDepartment";
 import { onboardingStudent } from "./onboardingAction";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -22,7 +21,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export default function OnboardingForm() {
   const { departments, isError, isLoading } = useDepartment();
-  const router = useRouter();
   const [studentType, setStudentType] = useState<"atmiya" | "other">("atmiya"); const [universityQuery, setUniversityQuery] = useState("");
   const [universityOptions, setUniversityOptions] = useState([]);
   const [_, setShowDropdown] = useState(false);
@@ -79,6 +77,7 @@ export default function OnboardingForm() {
     resolver: zodResolver(onboardingStudentSchema),
     defaultValues: {
       studentType: "atmiya",
+      phone: "",
       departmentId: "",
       programId: "",
       currentSemester: undefined,
@@ -97,12 +96,17 @@ export default function OnboardingForm() {
   }, [selectedDepartmentId, departments]);
 
   async function onSubmit(data: OnboardingStudentSchema) {
-    const response = await onboardingStudent(data);
-    if (response.error) {
-      toast.error(response.message);
-    } else {
+    try {
+      const response = await onboardingStudent(data);
+      if (response.error) {
+        toast.error(response.message || "Failed to complete onboarding");
+        return;
+      }
       toast.success("Onboarding completed successfully");
-      router.push("/student");
+      // Hard redirect — full page load lets middleware re-evaluate the session
+      window.location.replace("/student");
+    } catch {
+      toast.error("Something went wrong. Please try again.");
     }
   }
 
@@ -169,6 +173,29 @@ export default function OnboardingForm() {
             <TabsContent value="atmiya">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="container mx-auto flex flex-col gap-4">
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="tel"
+                            placeholder="e.g. 9876543210"
+                            {...field}
+                            value={field.value ?? ""}
+                            maxLength={10}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                              field.onChange(digits);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -316,6 +343,29 @@ export default function OnboardingForm() {
             <TabsContent value="other">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="container mx-auto flex flex-col gap-4">
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="tel"
+                            placeholder="e.g. 9876543210"
+                            {...field}
+                            value={field.value ?? ""}
+                            maxLength={10}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                              field.onChange(digits);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}

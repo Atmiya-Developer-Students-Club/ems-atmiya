@@ -31,6 +31,7 @@ export const hackathonSchema = z.object({
     required_error: "Status is required",
   }),
   team_size_limit: z.number().int().positive().optional(),
+  allow_external_students: z.boolean().optional().default(true),
   organizer_name: z.string().min(1, "Organizer name is required"),
   organizer_contact: z.string().optional(),
   problemStatements: z
