@@ -162,17 +162,17 @@ export async function GET() {
 
   const universityStats = studentsByUniversity.map((uni) => ({
     name: uni.university || "Unknown",
-    count: uni._count.id,
+    count: uni._count?.id ?? 0,
   }));
 
   const eventTypeStats = eventsByType.map((type) => ({
     name: type.event_type,
-    count: type._count.id,
+    count: type._count?.id ?? 0,
   }));
 
   const eventModeStats = eventsByMode.map((mode) => ({
     name: mode.mode,
-    count: mode._count.id,
+    count: mode._count?.id ?? 0,
   }));
 
   const avgEventRating = avgRatingAgg._avg.rating || 0;
