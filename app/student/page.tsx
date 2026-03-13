@@ -53,7 +53,8 @@ export default function StudentDashboard() {
   const router = useRouter();
   const { data, error, isLoading } = useSWR<StudentOverviewData>(
     "/api/student/overview",
-    fetcher
+    fetcher,
+    { dedupingInterval: 30000, revalidateOnFocus: false }
   );
   const setCurrentBreadcrumbs = useSetAtom(sidebarBreadcrumbs);
 
@@ -86,7 +87,20 @@ export default function StudentDashboard() {
 
       <Separator className="mb-8" />
 
-      {!isLoading && data ? (
+      {isLoading ? (
+        <div className="w-full space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Skeleton className="h-36 w-full" />
+            <Skeleton className="h-36 w-full" />
+            <Skeleton className="h-36 w-full" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+          <Skeleton className="h-64 w-full" />
+        </div>
+      ) : data ? (
         <div className="w-full space-y-8">
           <StudentKeyMetrics
             data={{
@@ -106,11 +120,7 @@ export default function StudentDashboard() {
           />
           <StudentCompletedEvents completedEvents={data.completedEvents} />
         </div>
-      ) : (
-        <div className="p-8">
-          <Skeleton className="h-96 w-full" />
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }

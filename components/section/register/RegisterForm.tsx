@@ -44,34 +44,41 @@ export default function RegisterForm() {
       return;
     }
 
-    const response = await registerStudent(data, captchaToken);
+    try {
+      const response = await registerStudent(data, captchaToken);
 
-    if (turnstileRef.current) {
-      turnstileRef.current.reset();
-      setCaptchaToken("");
-    }
+      if (turnstileRef.current) {
+        turnstileRef.current.reset();
+        setCaptchaToken("");
+      }
 
-    if (response.error) {
-      toast.error(response.error);
-    } else {
-      toast.success("Registration successful! Please check your email for verification.");
-      form.reset();
+      if (response.error) {
+        toast.error(response.error);
+      } else {
+        toast.success("Registration successful! Please check your email for verification.");
+        form.reset();
+      }
+    } catch {
+      toast.error("Something went wrong. Please check your connection and try again.");
+      if (turnstileRef.current) {
+        turnstileRef.current.reset();
+        setCaptchaToken("");
+      }
     }
   }
 
   async function handleContinueWithGoogle() {
-    setGoogleLoading(true); // Start loading
-    const response = await registerWithGoogleAction();
-
-    // Simulate a delay for loading effect
-    setTimeout(() => {
+    setGoogleLoading(true);
+    try {
+      const response = await registerWithGoogleAction();
+      if (response?.error) {
+        toast.error(response.error);
+        setGoogleLoading(false);
+      }
+    } catch {
+      // redirect() throws a NEXT_REDIRECT error — this is expected
+      // Only reset loading if we're still on the page (i.e. redirect didn't happen)
       setGoogleLoading(false);
-    }, 1000);
-
-    if (response.error) {
-      toast.error(response.error);
-    } else {
-      toast.success("Redirecting to Google...");
     }
   }
 
@@ -280,6 +287,14 @@ export default function RegisterForm() {
                   siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
                   onSuccess={(token) => {
                     setCaptchaToken(token);
+                  }}
+                  onExpire={() => {
+                    setCaptchaToken("");
+                    toast.error("CAPTCHA expired. Please verify again.");
+                  }}
+                  onError={() => {
+                    setCaptchaToken("");
+                    toast.error("CAPTCHA verification failed. Please try again.");
                   }}
                 />
 

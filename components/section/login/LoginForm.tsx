@@ -81,17 +81,18 @@ export default function LoginForm() {
     }
     try {
       const response = await login(data, captchaToken);
-      if (turnstileRef.current) {
-        turnstileRef.current.reset();
-        setCaptchaToken("");
-      }
       if (response.error) {
         toast.error(response.error);
+        if (turnstileRef.current) {
+          turnstileRef.current.reset();
+          setCaptchaToken("");
+        }
       } else {
-        await refreshUser(); // Refresh user context after login
         toast.success("Logged in successfully");
         const dashboardPath = getDashboardPath(response.message);
         router.push(dashboardPath);
+        // Refresh auth context in the background — don't block the redirect
+        refreshUser().catch(() => {});
       }
     } catch {
       toast.error("Something went wrong. Please check your connection and try again.");
@@ -345,6 +346,14 @@ export default function LoginForm() {
                   }}
                   onSuccess={(token) => {
                     setCaptchaToken(token);
+                  }}
+                  onExpire={() => {
+                    setCaptchaToken("");
+                    toast.error("CAPTCHA expired. Please verify again.");
+                  }}
+                  onError={() => {
+                    setCaptchaToken("");
+                    toast.error("CAPTCHA verification failed. Please try again.");
                   }}
                 />
 

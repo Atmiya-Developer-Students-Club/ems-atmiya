@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 
+const eventSelectFields = {
+  id: true,
+  name: true,
+  start_date: true,
+  end_date: true,
+  event_type: true,
+  mode: true,
+} as const;
+
 export async function GET() {
   const supabase = await createClient();
   const { data, error: userError } = await supabase.auth.getUser();
@@ -11,58 +20,61 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Find student by supabaseId
+  // Find student by supabaseId — select only needed fields
   const student = await prisma.student.findUnique({
     where: { userId: user.id },
-    include: {
-      department: true,
-      program: true,
-      user: true,
+    select: {
+      currentSemester: true,
+      currentYear: true,
+      department: { select: { name: true } },
+      program: { select: { name: true } },
+      user: { select: { firstName: true, lastName: true } },
     },
   });
   if (!student) {
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
   }
 
-  // Total events attended
-  const totalEventsAttended = await prisma.eventRegistration.count({
-    where: { userId: user.id },
-  });
-
-  // Upcoming registered events
-  const upcomingEvents = await prisma.eventRegistration.findMany({
-    where: {
-      userId: user.id,
-      event: { status: "UPCOMING" },
-    },
-    include: { event: true },
-    orderBy: { event: { start_date: "asc" } },
-    take: 5,
-  });
-
-  // Completed events attended
-  const completedEvents = await prisma.eventRegistration.findMany({
-    where: {
-      userId: user.id,
-      event: { status: "COMPLETED" },
-    },
-    include: { event: true },
-    orderBy: { event: { end_date: "desc" } },
-    take: 5,
-  });
-
-  // Feedback given
-  const feedbackGiven = await prisma.eventFeedback.count({
-    where: { userId: user.id },
-  });
-
-  // Recent feedback
-  const recentFeedback = await prisma.eventFeedback.findMany({
-    where: { userId: user.id },
-    include: { event: true },
-    orderBy: { createdAt: "desc" },
-    take: 5,
-  });
+  // Run all independent queries in a single transaction (uses one connection)
+  const [totalEventsAttended, upcomingEvents, completedEvents, feedbackGiven, recentFeedback] =
+    await prisma.$transaction([
+      prisma.eventRegistration.count({
+        where: { userId: user.id },
+      }),
+      prisma.eventRegistration.findMany({
+        where: {
+          userId: user.id,
+          event: { status: "UPCOMING" },
+        },
+        select: { event: { select: eventSelectFields } },
+        orderBy: { event: { start_date: "asc" } },
+        take: 5,
+      }),
+      prisma.eventRegistration.findMany({
+        where: {
+          userId: user.id,
+          event: { status: "COMPLETED" },
+        },
+        select: { event: { select: eventSelectFields } },
+        orderBy: { event: { end_date: "desc" } },
+        take: 5,
+      }),
+      prisma.eventFeedback.count({
+        where: { userId: user.id },
+      }),
+      prisma.eventFeedback.findMany({
+        where: { userId: user.id },
+        select: {
+          id: true,
+          rating: true,
+          comment: true,
+          event: { select: { name: true } },
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      }),
+    ]);
 
   return NextResponse.json({
     student: {

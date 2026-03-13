@@ -51,7 +51,7 @@ export const HackthonICARD = ({
                 {/* Carnival Logo - Right */}
                 <View style={styles.logoPlaceholder}>
                     <Image
-                        src="/images/code-carnival-logo.png"
+                        src="/images/AU HACKATHON BG REMOVED.png"
                         style={styles.headerLogoImage}
                     />
                 </View>
@@ -135,7 +135,7 @@ export const HackthonICARD = ({
                         style={styles.orgLogoImage}
                     />
                 </View>
-                <View style={styles.orgLogoBox}>
+                {/* <View style={styles.orgLogoBox}>
                     <Image
                         src="/images/iic-logo.png"
                         style={styles.orgLogoImage}
@@ -146,10 +146,10 @@ export const HackthonICARD = ({
                         src="/images/ssip-logo.png"
                         style={styles.orgLogoImage}
                     />
-                </View>
+                </View> */}
                 <View style={styles.orgLogoBox}>
                     <Image
-                        src="/images/ieee-logo.png"
+                        src="/images/rita.png"
                         style={styles.orgLogoImage}
                     />
                 </View>
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     page: {
         width: '7cm',
         height: '10.5cm',
-        backgroundColor: '#000000',
+        backgroundColor: '#f9f9f9',
         padding: 0,
         position: 'relative',
         paddingLeft: 20,
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
         objectFit: 'contain',
     },
     placeholderText: {
-        color: '#ec4899',
+        color: '#1d4ed7',
         fontSize: 8,
         fontWeight: 'bold',
         position: 'absolute',
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     allAccessText: {
-        color: '#ffffff',
+        color: '#000000',
         fontSize: 18,
         fontWeight: 'bold',
         letterSpacing: 2,
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     },
     divider: {
         height: 1,
-        backgroundColor: '#ec4899',
+        backgroundColor: '#1d4ed7',
         marginTop: 4,
     },
 
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     nameText: {
-        color: '#ffffff',
+        color: '#000000',
         fontSize: 12,
         fontWeight: 'bold',
         letterSpacing: 1,
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
         lineHeight: 1.2,
         textAlign: 'left',
     }, infoValueText: {
-        color: '#ffffff',
+        color: '#000000',
         fontSize: 10,
         overflow: 'hidden',
         lineHeight: 1.2,
@@ -296,9 +296,9 @@ const styles = StyleSheet.create({
         height: 100,
         borderRadius: 50,
         opacity: 0.4,
-        backgroundColor: 'black',
+        backgroundColor: '#ffa805',
         borderWidth: 14,
-        borderColor: '#6b7280',
+        borderColor: '#fecd07',
     },
     triangleSymbol: {
         width: 0,
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#ff0000',
     },
     symbolText: {
-        color: '#ffffff',
+        color: '#000000',
         fontSize: 8,
         fontWeight: '600',
     },
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
         columnGap: 5,
         bottom: 10,
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
         alignItems: 'center',
     },
     orgLogoBox: {
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#1a1a1a',
+        backgroundColor: '#ededed',
         position: 'relative',
     },
     orgLogoImage: {

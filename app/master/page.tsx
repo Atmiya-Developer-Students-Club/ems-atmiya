@@ -61,7 +61,8 @@ type MasterOverviewData = {
 export default function MasterOverview() {
   const { data, error, isLoading } = useSWR<MasterOverviewData>(
     "/api/master/overview",
-    fetcher
+    fetcher,
+    { dedupingInterval: 30000, revalidateOnFocus: false }
   );
   const setCurrentBreadcrumbs = useSetAtom(sidebarBreadcrumbs);
   const { user } = useAuth(); // Use auth context instead of direct calls
@@ -91,7 +92,28 @@ export default function MasterOverview() {
 
       <Separator className="mb-8" />
 
-      {!isLoading && data ? (
+      {isLoading ? (
+        <div className="w-full space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Skeleton className="h-36 w-full" />
+            <Skeleton className="h-36 w-full" />
+            <Skeleton className="h-36 w-full" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <Skeleton className="h-72 w-full" />
+            <Skeleton className="h-72 w-full" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+          <Skeleton className="h-64 w-full" />
+        </div>
+      ) : data ? (
         <div className="w-full space-y-8">
           <KeyMetrics data={data} />
           <MonthlyTrendCharts
@@ -114,11 +136,7 @@ export default function MasterOverview() {
             recentFeedback={data.recentFeedback}
           />
         </div>
-      ) : (
-        <div className="p-8">
-          <Skeleton className="h-96 w-full" />
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
