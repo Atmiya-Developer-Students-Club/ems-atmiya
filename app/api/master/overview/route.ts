@@ -30,7 +30,28 @@ export async function GET() {
   sixMonthsAgo.setMonth(now.getMonth() - 5);
   const startDate = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth(), 1);
 
-  // Run ALL independent queries in a single transaction (uses one connection)
+  // Run queries in two batches to maintain type safety
+  // Batch 1: groupBy queries (run separately for proper type inference)
+  const [studentsByUniversity, eventsByType, eventsByMode] = await Promise.all([
+    prisma.student.groupBy({
+      by: ["university"],
+      _count: { id: true },
+      where: { university: { not: null } },
+      orderBy: { _count: { id: "desc" } },
+    }),
+    prisma.event.groupBy({
+      by: ["event_type"],
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+    }),
+    prisma.event.groupBy({
+      by: ["mode"],
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+    }),
+  ]);
+
+  // Batch 2: all other queries in a single transaction (one connection)
   const [
     totalStudents,
     totalPrograms,
@@ -39,9 +60,6 @@ export async function GET() {
     cancelledEvents,
     studentsByDepartment,
     studentsByProgram,
-    studentsByUniversity,
-    eventsByType,
-    eventsByMode,
     recentEvents,
     recentRegistrations,
     recentFeedback,
@@ -68,22 +86,6 @@ export async function GET() {
         name: true,
         _count: { select: { students: true } },
       },
-    }),
-    prisma.student.groupBy({
-      by: ["university"],
-      _count: { id: true },
-      where: { university: { not: null } },
-      orderBy: { _count: { id: "desc" } },
-    }),
-    prisma.event.groupBy({
-      by: ["event_type"],
-      _count: { id: true },
-      orderBy: { _count: { id: "desc" } },
-    }),
-    prisma.event.groupBy({
-      by: ["mode"],
-      _count: { id: true },
-      orderBy: { _count: { id: "desc" } },
     }),
     prisma.event.findMany({
       orderBy: { start_date: "desc" },
@@ -162,17 +164,17 @@ export async function GET() {
 
   const universityStats = studentsByUniversity.map((uni) => ({
     name: uni.university || "Unknown",
-    count: uni._count?.id ?? 0,
+    count: uni._count.id,
   }));
 
   const eventTypeStats = eventsByType.map((type) => ({
     name: type.event_type,
-    count: type._count?.id ?? 0,
+    count: type._count.id,
   }));
 
   const eventModeStats = eventsByMode.map((mode) => ({
     name: mode.mode,
-    count: mode._count?.id ?? 0,
+    count: mode._count.id,
   }));
 
   const avgEventRating = avgRatingAgg._avg.rating || 0;
