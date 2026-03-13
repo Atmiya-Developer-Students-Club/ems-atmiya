@@ -19,16 +19,81 @@ export async function GET(
   try {
     const hackathonId = id;
 
-    // Different query based on if master details are requested
-    const hackathon = await prisma.hackathon.findUnique({
-      where: { id: hackathonId },
-      include: {
-        attendanceSchedules: {
-          include: {
-            attendanceRecords: {
-              include: {                
-                teamMember: {
+    // Run hackathon query and student lookup in parallel
+    const [hackathon, student] = await Promise.all([
+      prisma.hackathon.findUnique({
+        where: { id: hackathonId },
+        include: {
+          ...(includeMasterDetails ? {
+            attendanceSchedules: {
+              include: {
+                attendanceRecords: {
                   include: {
+                    teamMember: {
+                      include: {
+                        student: {
+                          include: {
+                            user: {
+                              select: {
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                                phone: true,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                    checkedInByUser: {
+                      select: {
+                        firstName: true,
+                        lastName: true,
+                        email: true
+                      }
+                    }
+                  }
+                }
+              },
+              orderBy: [
+                { day: 'asc' },
+                { checkInTime: 'asc' }
+              ]
+            },
+          } : {
+            attendanceSchedules: {
+              select: {
+                id: true,
+                day: true,
+                checkInTime: true,
+                description: true,
+              },
+              orderBy: [
+                { day: 'asc' },
+                { checkInTime: 'asc' }
+              ]
+            },
+          }),
+          problemStatements: true,
+          rules: true,
+          ...(includeMasterDetails ? {
+            teams: {
+              select: {
+                id: true,
+                teamName: true,
+                teamId: true,
+                disqualified: true,
+                submissionUrl: true,
+                leaderId: true,
+                mentor: true,
+                mentor_mail: true,
+                members: {
+                  select: {
+                    id: true,
+                    studentId: true,
+                    attended: true,
+                    qrCode: true,
+                    qrCodeData: true,
                     student: {
                       include: {
                         user: {
@@ -39,79 +104,37 @@ export async function GET(
                             phone: true,
                           },
                         },
+                        department: {
+                          select: {
+                            name: true,
+                          },
+                        },
                       },
                     },
                   },
                 },
-                checkedInByUser: {
+                problemStatement: {
                   select: {
-                    firstName: true,
-                    lastName: true,
-                    email: true
-                  }
-                }
-              }
-            }
-          },
-          orderBy: [
-            { day: 'asc' },
-            { checkInTime: 'asc' }
-          ]
-        },
-        problemStatements: true,
-        rules: true,
-        ...(includeMasterDetails ? {
-          teams: {
-            select: {
-              id: true,
-              teamName: true,
-              teamId: true,
-              disqualified: true,
-              submissionUrl: true,
-              leaderId: true,
-              mentor: true,
-              mentor_mail: true,
-              members: {
-                select: {
-                  id: true,
-                  studentId: true,
-                  attended: true,
-                  qrCode: true,
-                  qrCodeData: true,                  
-                  student: {
-                    include: {
-                      user: {
-                        select: {
-                          firstName: true,
-                          lastName: true,
-                          email: true,
-                          phone: true,
-                        },
-                      },
-                      department: {
-                        select: {
-                          name: true,
-                        },
-                      },
-                    },
+                    id: true,
+                    code: true,
+                    title: true,
                   },
                 },
               },
-              problemStatement: {
-                select: {
-                  id: true,
-                  code: true,
-                  title: true,
-                },
+              orderBy: {
+                teamId: 'asc'
               },
             },
-            orderBy: {
-              teamId: 'asc'
-            },
-          },
-        } : {}),
-      },
-    });
+          } : {}),
+        },
+      }),
+      user?.id
+        ? prisma.student.findFirst({
+            where: { userId: user.id },
+            select: { id: true },
+          })
+        : null,
+    ]);
 
     if (!hackathon) {
       return NextResponse.json({ error: "Hackathon not found" }, { status: 404 });
@@ -121,80 +144,66 @@ export async function GET(
     let userTeam: HackathonTeam | null = null;
     let pendingInvites: { teamId: string; teamName: string }[] = [];
 
-    // Find the student record
-    const student = await prisma.student.findFirst({
-      where: {
-        userId: user?.id,
-      },
-      select: {
-        id: true,
-      },
-    });
-
     if (student) {
-      // Check for team membership
-      const teamMembership = await prisma.hackathonTeamMember.findFirst({
-        where: {
-          studentId: student.id,
-          team: {
-            hackathonId,
-          },
-        },
-        include: {
-          team: {
-            include: {
-              members: {
-                include: {
-                  student: {
-                    include: {
-                      user: {
-                        select: {
-                          firstName: true,
-                          lastName: true,
-                          email: true,
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-              invites: {
-                include: {
-                  student: {
-                    include: {
-                      user: {
-                        select: {
-                          firstName: true,
-                          lastName: true,
-                          email: true,
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-              problemStatement: {
-                select: {
-                  id: true,
-                  code: true,
-                  title: true,
-                },
-              },
-              hackathon: {
-                select: {
-                  team_size_limit: true,
-                }
-              }
+      // Run team membership and pending invites queries in parallel
+      const [teamMembership, invites] = await Promise.all([
+        prisma.hackathonTeamMember.findFirst({
+          where: {
+            studentId: student.id,
+            team: {
+              hackathonId,
             },
           },
-        },
-      });
-
-      if (teamMembership) {
-        userTeam = teamMembership.team;
-      } else {
-        // Check for pending invites
-        const invites = await prisma.hackathonTeamInvite.findMany({
+          include: {
+            team: {
+              include: {
+                members: {
+                  include: {
+                    student: {
+                      include: {
+                        user: {
+                          select: {
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                invites: {
+                  include: {
+                    student: {
+                      include: {
+                        user: {
+                          select: {
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                problemStatement: {
+                  select: {
+                    id: true,
+                    code: true,
+                    title: true,
+                  },
+                },
+                hackathon: {
+                  select: {
+                    team_size_limit: true,
+                  }
+                }
+              },
+            },
+          },
+        }),
+        prisma.hackathonTeamInvite.findMany({
           where: {
             studentId: student.id,
             team: {
@@ -210,8 +219,14 @@ export async function GET(
               },
             },
           },
-        });
+        }),
+      ]);
 
+      if (teamMembership) {
+        userTeam = teamMembership.team;
+      }
+
+      if (!teamMembership) {
         pendingInvites = invites.map((invite) => ({
           teamId: invite.teamId,
           teamName: invite.team.teamName,

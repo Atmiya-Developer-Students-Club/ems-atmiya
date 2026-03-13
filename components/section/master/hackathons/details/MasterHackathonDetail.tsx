@@ -150,6 +150,7 @@ export interface MasterHackathonDetailProps {
   onTeamClick?: (team: HackathonTeam) => void;
   onEditTeamClick?: (team: HackathonTeam) => void;
   onDeleteTeam?: (team: HackathonTeam) => void;
+  onMutate?: () => void;
 }
 
 // Schema for attendance schedule form
@@ -166,6 +167,7 @@ export default function MasterHackathonDetail({
   onTeamClick,
   onEditTeamClick,
   onDeleteTeam,
+  onMutate,
 }: MasterHackathonDetailProps) {
   const [activeTab, setActiveTab] = useState("details");
   const [isExporting, setIsExporting] = useState(false);
@@ -304,7 +306,7 @@ export default function MasterHackathonDetail({
     const res = await toggleHackathonRegistration(hackathon.id);
     if (res.success) {
       toast.success(res.message);
-      router.refresh();
+      onMutate?.();
     } else {
       toast.error(res.message);
     }
@@ -314,7 +316,7 @@ export default function MasterHackathonDetail({
     const res = await toggleHackathonSubmission(hackathon.id);
     if (res.success) {
       toast.success(res.message);
-      router.refresh();
+      onMutate?.();
     } else {
       toast.error(res.message);
     }

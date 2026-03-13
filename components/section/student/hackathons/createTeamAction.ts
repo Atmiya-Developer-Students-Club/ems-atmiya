@@ -100,12 +100,8 @@ export async function createTeamAction(teamData: TeamSchema, hackathonId: string
       return { error: "Hackathon not found" };
     }
 
-    const now = new Date();
-    const registrationStartDate = new Date(hackathon.registration_start_date);
-    const registrationEndDate = new Date(hackathon.registration_end_date);
-
-    if (now < registrationStartDate || now > registrationEndDate) {
-      return { error: "Registration is not open for this hackathon" };
+    if (!hackathon.open_registrations) {
+      return { error: "Registrations are closed for this hackathon" };
     }
 
     // Check if registration limit is reached
@@ -117,10 +113,6 @@ export async function createTeamAction(teamData: TeamSchema, hackathonId: string
       if (teamCount >= hackathon.registration_limit) {
         return { error: "Registration limit for this hackathon has been reached" };
       }
-    }
-
-    if (!hackathon.open_registrations) {
-      return { error: "Registrations are closed for this hackathon" };
     }
 
     // Verify the problem statement belongs to this hackathon

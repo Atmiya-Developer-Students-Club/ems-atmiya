@@ -34,8 +34,10 @@ export async function inviteTeamMemberAction(teamId: string, studentEmail: strin
       return { error: "This team has been disqualified and cannot invite new members." };
     }
 
-    if (!team.hackathon.open_registrations) {
-      return { error: "Hackathon registrations are closed" };
+    // Allow invitations as long as the hackathon hasn't started
+    const now = new Date();
+    if (now > team.hackathon.start_date) {
+      return { error: "This hackathon has already started" };
     }
 
     // Check if hackathon restricts to Atmiya students only

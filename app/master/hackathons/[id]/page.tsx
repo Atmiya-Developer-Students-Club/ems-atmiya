@@ -67,6 +67,7 @@ export default function MasterHackathonDetailPage() {
     data,
     error: swrError,
     isLoading: swrLoading,
+    mutate,
   } = useSWR<MasterHackathonDetailProps>(
     params.id ? `/api/hackathons/${params.id}?includeMasterDetails=true` : null,
     fetcher
@@ -241,6 +242,7 @@ export default function MasterHackathonDetailPage() {
         onTeamClick={handleTeamClick}
         onEditTeamClick={handleEditTeamClick}
         onDeleteTeam={handleDeleteTeam}
+        onMutate={() => mutate()}
       />
       {/* View Team Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

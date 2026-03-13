@@ -52,14 +52,15 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Always allow access to API routes and certain public routes
-  if (currentPath.startsWith("/api/") || currentPath === "/" || currentPath === "/events") {
-    return response;
-  }
-
+  // Always refresh the session to keep tokens valid
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Allow access to API routes and certain public routes without further checks
+  if (currentPath.startsWith("/api/") || currentPath === "/" || currentPath === "/events") {
+    return response;
+  }
 
   // Handle authenticated users
   if (user) {

@@ -1,32 +1,21 @@
 import { Metadata } from 'next';
-import { prisma } from '@/lib/prisma';
 
 interface HackathonLayoutProps {
   children: React.ReactNode;
   params: Promise<{ id: string }>;
 }
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
 export async function generateMetadata({ params }: HackathonLayoutProps): Promise<Metadata> {
   const { id } = await params;
   
   try {
-    const hackathon = await prisma.hackathon.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        start_date: true,
-        end_date: true,
-        location: true,
-        mode: true,
-        organizer_name: true,
-        status: true,
-        team_size_limit: true,
-      }
+    const res = await fetch(`${SITE_URL}/api/hackathons/${id}`, {
+      next: { revalidate: 60 },
     });
 
-    if (!hackathon) {
+    if (!res.ok) {
       return {
         title: 'Hackathon Not Found',
         description: 'The requested hackathon could not be found.',
@@ -38,18 +27,21 @@ export async function generateMetadata({ params }: HackathonLayoutProps): Promis
       };
     }
 
-    const formatDate = (date: Date) => {
+    const data = await res.json();
+    const hackathon = data.hackathon;
+
+    const formatDate = (date: string) => {
       return new Intl.DateTimeFormat('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
-      }).format(date);
+      }).format(new Date(date));
     };
 
     const startDate = formatDate(hackathon.start_date);
     const endDate = formatDate(hackathon.end_date);
     const location = hackathon.mode === 'OFFLINE' ? hackathon.location : 'Online Hackathon';
-    const ogImageUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/hackathons/${id}/og-image`;
+    const ogImageUrl = `${SITE_URL}/api/hackathons/${id}/og-image`;
 
     return {
       title: `${hackathon.name} - EMS Platform`,
@@ -58,7 +50,7 @@ export async function generateMetadata({ params }: HackathonLayoutProps): Promis
         title: hackathon.name,
         description: hackathon.description,
         type: 'website',
-        url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/hackathons/${id}`,
+        url: `${SITE_URL}/hackathons/${id}`,
         images: [
           {
             url: ogImageUrl,

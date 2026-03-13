@@ -104,11 +104,8 @@ export function CreateTeamForm({ hackathon, userIsRegistered, onTeamCreated, tri
     );
   }
 
-  // Check if registration is open
-  const now = new Date();
-  const registrationStartDate = new Date(hackathon.registration_start_date);
-  const registrationEndDate = new Date(hackathon.registration_end_date);
-  const isRegistrationOpen = now >= registrationStartDate && now <= registrationEndDate;
+  // Check if registration is open — master toggle is the primary control
+  const isRegistrationOpen = hackathon.open_registrations;
 
   if (!isRegistrationOpen) {
     return (
@@ -119,10 +116,7 @@ export function CreateTeamForm({ hackathon, userIsRegistered, onTeamCreated, tri
         <CardContent>
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
             <p className="text-yellow-700">
-              Registration is {now < registrationStartDate ? "not yet open" : "closed"} for this hackathon.
-              {now < registrationStartDate
-                ? ` Registration opens on ${registrationStartDate.toLocaleDateString()}.`
-                : ""}
+              Registrations are currently closed for this hackathon.
             </p>
           </div>
         </CardContent>
