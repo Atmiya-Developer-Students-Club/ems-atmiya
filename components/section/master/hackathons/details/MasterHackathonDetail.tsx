@@ -172,6 +172,8 @@ export default function MasterHackathonDetail({
   const [activeTab, setActiveTab] = useState("details");
   const [isExporting, setIsExporting] = useState(false);
   const [teamSearch, setTeamSearch] = useState(""); // <-- search state
+  const [teamIdSearch, setTeamIdSearch] = useState("");
+  const [mentorSearch, setMentorSearch] = useState("");
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
@@ -1131,12 +1133,24 @@ export default function MasterHackathonDetail({
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  {/* Search input for team name */}
-                  <div className="mt-4">
+                  {/* Search inputs for team name and team ID */}
+                  <div className="mt-4 flex flex-col sm:flex-row gap-2">
                     <Input
                       placeholder="Search by team name..."
                       value={teamSearch}
                       onChange={e => setTeamSearch(e.target.value)}
+                      className="max-w-xs w-full"
+                    />
+                    <Input
+                      placeholder="Filter by team ID..."
+                      value={teamIdSearch}
+                      onChange={e => setTeamIdSearch(e.target.value)}
+                      className="max-w-xs w-full"
+                    />
+                    <Input
+                      placeholder="Search by mentor name..."
+                      value={mentorSearch}
+                      onChange={e => setMentorSearch(e.target.value)}
                       className="max-w-xs w-full"
                     />
                   </div>
@@ -1147,8 +1161,10 @@ export default function MasterHackathonDetail({
                       <table className="w-full caption-bottom text-sm min-w-[700px]">
                         <thead className="sticky top-0 bg-background z-10 [&_tr]:border-b">
                           <tr className="border-b transition-colors hover:bg-muted/50">
+                            <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Team ID</th>
                             <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Team Name</th>
                             <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Problem Statement</th>
+                            <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Mentor</th>
                             <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Members</th>
                             <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Submission</th>
                             <th className="h-10 px-2 text-right align-middle font-medium text-muted-foreground">Actions</th>
@@ -1156,9 +1172,14 @@ export default function MasterHackathonDetail({
                         </thead>
                         <tbody className="[&_tr:last-child]:border-0">
                           {(hackathon.teams.filter(team =>
-                            team.teamName.toLowerCase().includes(teamSearch.toLowerCase())
+                            team.teamName.toLowerCase().includes(teamSearch.toLowerCase()) &&
+                            (teamIdSearch === "" || (team.teamId != null && String(team.teamId).includes(teamIdSearch))) &&
+                            (mentorSearch === "" || (team.mentor && team.mentor.toLowerCase().includes(mentorSearch.toLowerCase())))
                           )).map((team) => (
                             <tr key={team.id} className="border-b transition-colors hover:bg-muted/50">
+                              <td className="p-2 align-middle text-muted-foreground">
+                                {team.teamId ?? "-"}
+                              </td>
                               <td className="p-2 align-middle font-medium">
                                 {team.teamName}
                               </td>
@@ -1167,6 +1188,7 @@ export default function MasterHackathonDetail({
                                   `${team.problemStatement.code}: ${team.problemStatement.title}` :
                                   "Not selected"}
                               </td>
+                              <td className="p-2 align-middle">{team.mentor || "-"}</td>
                               <td className="p-2 align-middle">{team.members.length}</td>
                               <td className="p-2 align-middle">
                                 {team.submissionUrl ? (
