@@ -16,8 +16,8 @@ function ask(question: string): Promise<string> {
 
 async function selectHackathon() {
   const hackathons = await prisma.hackathon.findMany({
-    orderBy: { startDate: "desc" },
-    select: { id: true, title: true, startDate: true },
+    orderBy: { start_date: "desc" },
+    select: { id: true, name: true, start_date: true },
   });
 
   if (hackathons.length === 0) {
@@ -27,7 +27,7 @@ async function selectHackathon() {
 
   console.log("\n--- Hackathons ---");
   hackathons.forEach((h, i) => {
-    console.log(`  [${i + 1}] ${h.title} (${h.startDate.toLocaleDateString()})`);
+    console.log(`  [${i + 1}] ${h.name} (${h.start_date.toLocaleDateString()})`);
   });
 
   const choice = await ask("\nSelect hackathon number: ");
@@ -215,7 +215,7 @@ async function main() {
   console.log("=== Manage Hackathon Team Members ===\n");
 
   const hackathon = await selectHackathon();
-  console.log(`\nSelected: ${hackathon.title}`);
+  console.log(`\nSelected: ${hackathon.name}`);
 
   const team = await selectTeam(hackathon.id);
   console.log(`\nSelected: ${team.teamId ?? "N/A"} - ${team.teamName}`);
