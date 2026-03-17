@@ -101,6 +101,8 @@ interface HackathonTeam {
   id: string;
   teamName: string;
   teamId: string | null;
+  mentor?: string | null;
+  mentor_mail?: string | null;
   disqualified: boolean;
   submissionUrl?: string | null;
   leaderId?: string | null;
