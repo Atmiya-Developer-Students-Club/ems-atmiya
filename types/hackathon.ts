@@ -45,6 +45,8 @@ export interface HackathonTeam {
   id: string;
   teamName: string;
   teamId: string | null;
+  mentor?: string | null;
+  mentor_mail?: string | null;
   leaderId?: string | null;
   leader?: {
     id: string;
