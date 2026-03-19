@@ -55,6 +55,13 @@ import {
   ExportData
 } from "@/utils/functions/exportUtils";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toggleHackathonRegistration } from "./hackathonRegistrationTogglerAction";
 import { toggleHackathonSubmission } from "./hackathonSubmissionsTogglerAction";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -91,6 +98,7 @@ interface TeamMember {
       name: string;
     };
     enrollment: string;
+    university?: string; // <-- add university field if available
   };
   attended: boolean;
   qrCode?: string;
@@ -171,11 +179,16 @@ export default function MasterHackathonDetail({
   onDeleteTeam,
   onMutate,
 }: MasterHackathonDetailProps) {
+  const [universityFilter, setUniversityFilter] = useState<"ALL" | "ATMIYA" | "OTHER">("ALL");
   const [activeTab, setActiveTab] = useState("details");
+  const [teamStatusFilter, setTeamStatusFilter] = useState<'ALL' | 'QUALIFIED' | 'DISQUALIFIED'>('ALL');
+  const [teamsPage, setTeamsPage] = useState(1);
+  const teamsPerPage = 10;
   const [isExporting, setIsExporting] = useState(false);
   const [teamSearch, setTeamSearch] = useState(""); // <-- search state
   const [teamIdSearch, setTeamIdSearch] = useState("");
   const [mentorSearch, setMentorSearch] = useState("");
+  const [problemStatementFilter, setProblemStatementFilter] = useState("ALL");
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
@@ -219,30 +232,142 @@ export default function MasterHackathonDetail({
     setIsExporting(true);
 
     try {
-      // Format team data for export
-      const formattedTeams = formatTeamData(hackathon.teams as unknown as Record<string, unknown>[]);
-
-      const exportData: ExportData = {
-        teams: formattedTeams
-      };
+      // Separate teams
+      const nonDisqTeams = hackathon.teams.filter(t => !t.disqualified);
+      const disqTeams = hackathon.teams.filter(t => t.disqualified);
+      const formattedNonDisq = formatTeamData(nonDisqTeams as unknown as Record<string, unknown>[]);
+      const formattedDisq = formatTeamData(disqTeams as unknown as Record<string, unknown>[]);
 
       const filename = `${hackathon.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_teams_${new Date().toISOString().split('T')[0]}`;
 
       switch (format) {
-        case 'csv':
-          await exportToCSV(exportData, filename, 'teams');
-          toast.success("Team data exported to CSV successfully!");
+        case 'csv': {
+          // Export non-disqualified teams
+          await exportToCSV({ teams: formattedNonDisq }, filename, 'teams');
+          // Export disqualified teams if any
+          if (formattedDisq.length > 0) {
+            await exportToCSV({ teams: formattedDisq }, filename + '_disqualified', 'teams');
+            toast.success("Exported: main teams + disqualified teams CSV");
+          } else {
+            toast.success("Team data exported to CSV successfully!");
+          }
           break;
-        case 'xlsx':
-          await exportToXLSX(exportData, filename, 'teams');
-          toast.success("Team data exported to Excel successfully!");
+        }
+        case 'xlsx': {
+          // Export three sheets: Teams, Team Members, Disqualified Teams
+          const ExportXLSXWithDisqAndMembers = async () => {
+            try {
+              const xlsxImport = await import('xlsx');
+              const XLSX = xlsxImport.default || xlsxImport;
+              if (!XLSX || !XLSX.utils) {
+                throw new Error('XLSX import failed or missing utils');
+              }
+              const workbook = XLSX.utils.book_new();
+              // 1. Team overview (non-disqualified)
+              const teamOverview = formattedNonDisq.map(team => ({
+                'Team ID': team.teamId,
+                'Team Name': team.teamName,
+                'Problem Code': team.problemCode,
+                'Problem Statement': team.problemStatement,
+                'Member Count': team.memberCount,
+                'Has Submission': team.hasSubmission,
+                'Submission URL': team.submissionUrl
+              }));
+              const teamWs = XLSX.utils.json_to_sheet(teamOverview);
+              XLSX.utils.book_append_sheet(workbook, teamWs, 'Teams');
+
+              // 2. Team member-wise data (non-disqualified)
+              const memberDetails: {
+                'Team ID': string | null;
+                'Team Name': string;
+                'Member Name': string;
+                'Email': string;
+                'Phone Number': string;
+                'Role': string;
+                'University': string;
+                'Attended': string;
+              }[] = [];
+              formattedNonDisq.forEach(team => {
+                if (team.members && team.members.length > 0) {
+                  team.members.forEach(member => {
+                    memberDetails.push({
+                      'Team ID': team.teamId,
+                      'Team Name': team.teamName,
+                      'Member Name': member.name,
+                      'Email': member.email || 'N/A',
+                      'Phone Number': member.phoneNumber || 'N/A',
+                      'Role': member.isTeamAdmin ? 'Team Leader' : 'Member',
+                      'University': member.university || 'N/A',
+                      'Attended': member.attended ? 'Yes' : 'No'
+                    });
+                  });
+                }
+              });
+              const memberWs = XLSX.utils.json_to_sheet(memberDetails);
+              XLSX.utils.book_append_sheet(workbook, memberWs, 'Team Members');
+
+              // 3. Disqualified teams
+              if (formattedDisq.length > 0) {
+                const disqOverview = formattedDisq.map(team => ({
+                  'Team ID': team.teamId,
+                  'Team Name': team.teamName,
+                  'Problem Code': team.problemCode,
+                  'Problem Statement': team.problemStatement,
+                  'Member Count': team.memberCount,
+                  'Has Submission': team.hasSubmission,
+                  'Submission URL': team.submissionUrl
+                }));
+                const disqWs = XLSX.utils.json_to_sheet(disqOverview);
+                XLSX.utils.book_append_sheet(workbook, disqWs, 'Disqualified Teams');
+
+                // 4. Disqualified team member-wise data
+                const disqMemberDetails: {
+                  'Team ID': string | null;
+                  'Team Name': string;
+                  'Member Name': string;
+                  'Email': string;
+                  'Phone Number': string;
+                  'Role': string;
+                  'University': string;
+                  'Attended': string;
+                }[] = [];
+                formattedDisq.forEach(team => {
+                  if (team.members && team.members.length > 0) {
+                    team.members.forEach(member => {
+                      disqMemberDetails.push({
+                        'Team ID': team.teamId,
+                        'Team Name': team.teamName,
+                        'Member Name': member.name,
+                        'Email': member.email || 'N/A',
+                        'Phone Number': member.phoneNumber || 'N/A',
+                        'Role': member.isTeamAdmin ? 'Team Leader' : 'Member',
+                        'University': member.university || 'N/A',
+                        'Attended': member.attended ? 'Yes' : 'No'
+                      });
+                    });
+                  }
+                });
+                const disqMemberWs = XLSX.utils.json_to_sheet(disqMemberDetails);
+                XLSX.utils.book_append_sheet(workbook, disqMemberWs, 'Disqualified Team Members');
+              }
+              XLSX.writeFile(workbook, `${filename}.xlsx`);
+            } catch (err) {
+              console.error('ExportXLSXWithDisqAndMembers error:', err);
+              toast.error('Failed to export Excel: ' + (err instanceof Error ? err.message : 'Unknown error'));
+              throw err;
+            }
+          };
+          await ExportXLSXWithDisqAndMembers();
+          toast.success("Team data exported to Excel (Teams, Team Members, Disqualified Teams)!");
           break;
+        }
         case 'pdf':
-          await exportToPDF(exportData, filename, 'teams', hackathon.name);
+          // Only non-disqualified teams in PDF
+          await exportToPDF({ teams: formattedNonDisq }, filename, 'teams', hackathon.name);
           toast.success("Team data exported to PDF successfully!");
           break;
         case 'signature-sheet':
-          await exportToPDF(exportData, filename, 'signature-sheet', hackathon.name);
+          await exportToPDF({ teams: formattedNonDisq }, filename, 'signature-sheet', hackathon.name);
           toast.success("Team data exported to Signature Sheet successfully!");
           break;
         default:
@@ -1095,6 +1220,16 @@ export default function MasterHackathonDetail({
             <TabsContent value="teams" className="mt-4">
               <Card>
                 <CardHeader>
+                                      <Select value={universityFilter} onValueChange={v => setUniversityFilter(v as 'ALL' | 'ATMIYA' | 'OTHER')}>
+                                        <SelectTrigger className="max-w-xs w-full">
+                                          <SelectValue placeholder="Filter by university" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="ALL">All Universities</SelectItem>
+                                          <SelectItem value="ATMIYA">Atmiya University</SelectItem>
+                                          <SelectItem value="OTHER">Other Universities</SelectItem>
+                                        </SelectContent>
+                                      </Select>
                   <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
                     <CardTitle>Registered Teams</CardTitle>
                     <DropdownMenu>
@@ -1137,6 +1272,16 @@ export default function MasterHackathonDetail({
                   </div>
                   {/* Search inputs for team name and team ID */}
                   <div className="mt-4 flex flex-col sm:flex-row gap-2">
+                                        <Select value={teamStatusFilter} onValueChange={v => setTeamStatusFilter(v as 'ALL' | 'QUALIFIED' | 'DISQUALIFIED')}>
+                                          <SelectTrigger className="max-w-xs w-full">
+                                            <SelectValue placeholder="Filter by team status" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="ALL">All Teams</SelectItem>
+                                            <SelectItem value="QUALIFIED">Qualified Teams</SelectItem>
+                                            <SelectItem value="DISQUALIFIED">Disqualified Teams</SelectItem>
+                                          </SelectContent>
+                                        </Select>
                     <Input
                       placeholder="Search by team name..."
                       value={teamSearch}
@@ -1155,83 +1300,136 @@ export default function MasterHackathonDetail({
                       onChange={e => setMentorSearch(e.target.value)}
                       className="max-w-xs w-full"
                     />
+                    <Select value={problemStatementFilter} onValueChange={setProblemStatementFilter}>
+                      <SelectTrigger className="max-w-xs w-full">
+                        <SelectValue placeholder="Filter by problem statement" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">All Problem Statements</SelectItem>
+                        <SelectItem value="NONE">Not Selected</SelectItem>
+                        {hackathon.problemStatements.map((ps) => (
+                          <SelectItem key={ps.id} value={ps.id}>
+                            {ps.code}: {ps.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {hackathon.teams && hackathon.teams.length > 0 ? (
-                    <div className="rounded-md border max-h-[500px] overflow-auto">
-                      <table className="w-full caption-bottom text-sm min-w-[700px]">
-                        <thead className="sticky top-0 bg-background z-10 [&_tr]:border-b">
-                          <tr className="border-b transition-colors hover:bg-muted/50">
-                            <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Team ID</th>
-                            <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Team Name</th>
-                            <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Problem Statement</th>
-                            <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Mentor</th>
-                            <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Members</th>
-                            <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Submission</th>
-                            <th className="h-10 px-2 text-right align-middle font-medium text-muted-foreground">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="[&_tr:last-child]:border-0">
-                          {(hackathon.teams.filter(team =>
-                            team.teamName.toLowerCase().includes(teamSearch.toLowerCase()) &&
-                            (teamIdSearch === "" || (team.teamId != null && String(team.teamId).includes(teamIdSearch))) &&
-                            (mentorSearch === "" || (team.mentor && team.mentor.toLowerCase().includes(mentorSearch.toLowerCase())))
-                          )).map((team) => (
-                            <tr key={team.id} className="border-b transition-colors hover:bg-muted/50">
-                              <td className="p-2 align-middle text-muted-foreground">
-                                {team.teamId ?? "-"}
-                              </td>
-                              <td className="p-2 align-middle font-medium">
-                                {team.teamName}
-                              </td>
-                              <td className="p-2 align-middle">
-                                {team.problemStatement ?
-                                  `${team.problemStatement.code}: ${team.problemStatement.title}` :
-                                  "Not selected"}
-                              </td>
-                              <td className="p-2 align-middle">{team.mentor || "-"}</td>
-                              <td className="p-2 align-middle">{team.members.length}</td>
-                              <td className="p-2 align-middle">
-                                {team.submissionUrl ? (
-                                  <Button variant="link" asChild size="sm" className="p-0 h-auto">
-                                    <a href={team.submissionUrl} target="_blank" rel="noopener noreferrer">
-                                      View Submission
-                                    </a>
-                                  </Button>
-                                ) : (
-                                  <span className="text-muted-foreground">No submission yet</span>
-                                )}
-                              </td>
-                              <td className="p-2 align-middle text-right">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                      <span className="sr-only">Actions</span>
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => onTeamClick && onTeamClick(team)}>
-                                      <Eye className="h-4 w-4 mr-2" />
-                                      View Team
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => onEditTeamClick && onEditTeamClick(team)}>
-                                      <Edit className="h-4 w-4 mr-2" />
-                                      Edit Team
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDeleteTeam && onDeleteTeam(team)}>
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      Delete Team
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    (() => {
+                      const filteredTeams = hackathon.teams.filter(team =>
+                        team.teamName.toLowerCase().includes(teamSearch.toLowerCase()) &&
+                        (teamIdSearch === "" || (team.teamId != null && String(team.teamId).includes(teamIdSearch))) &&
+                        (mentorSearch === "" || (team.mentor && team.mentor.toLowerCase().includes(mentorSearch.toLowerCase()))) &&
+                        (problemStatementFilter === "ALL" || (problemStatementFilter === "NONE" ? !team.problemStatement : team.problemStatement?.id === problemStatementFilter)) &&
+                        (teamStatusFilter === 'ALL' || (teamStatusFilter === 'QUALIFIED' ? !team.disqualified : team.disqualified)) &&
+                        (universityFilter === 'ALL' || (
+                          universityFilter === 'ATMIYA'
+                            ? team.members.some(m => ((m.student.university || '').toLowerCase().includes('atmiya')))
+                            : team.members.every(m => (m.student.university || '').toLowerCase() && !(m.student.university || '').toLowerCase().includes('atmiya'))
+                        ))
+                      );
+                      const totalPages = Math.ceil(filteredTeams.length / teamsPerPage);
+                      const paginatedTeams = filteredTeams.slice((teamsPage - 1) * teamsPerPage, teamsPage * teamsPerPage);
+                      return (
+                        <>
+                          <div className="rounded-md border max-h-[500px] overflow-auto">
+                            <table className="w-full caption-bottom text-sm min-w-[700px]">
+                              <thead className="sticky top-0 bg-background z-10 [&_tr]:border-b">
+                                <tr className="border-b transition-colors hover:bg-muted/50">
+                                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Team ID</th>
+                                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Team Name</th>
+                                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Problem Statement</th>
+                                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Mentor</th>
+                                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Members</th>
+                                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Submission</th>
+                                  <th className="h-10 px-2 text-right align-middle font-medium text-muted-foreground">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="[&_tr:last-child]:border-0">
+                                {paginatedTeams.map((team) => (
+                                  <tr key={team.id} className="border-b transition-colors hover:bg-muted/50">
+                                    <td className="p-2 align-middle text-muted-foreground">
+                                      {team.teamId ?? "-"}
+                                    </td>
+                                    <td className="p-2 align-middle font-medium">
+                                      {team.teamName}
+                                    </td>
+                                    <td className="p-2 align-middle">
+                                      {team.problemStatement ?
+                                        `${team.problemStatement.code}: ${team.problemStatement.title}` :
+                                        "Not selected"}
+                                    </td>
+                                    <td className="p-2 align-middle">{team.mentor || "-"}</td>
+                                    <td className="p-2 align-middle">{team.members.length}</td>
+                                    <td className="p-2 align-middle">
+                                      {team.submissionUrl ? (
+                                        <Button variant="link" asChild size="sm" className="p-0 h-auto">
+                                          <a href={team.submissionUrl} target="_blank" rel="noopener noreferrer">
+                                            View Submission
+                                          </a>
+                                        </Button>
+                                      ) : (
+                                        <span className="text-muted-foreground">No submission yet</span>
+                                      )}
+                                    </td>
+                                    <td className="p-2 align-middle text-right">
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            <span className="sr-only">Actions</span>
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem onClick={() => onTeamClick && onTeamClick(team)}>
+                                            <Eye className="h-4 w-4 mr-2" />
+                                            View Team
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => onEditTeamClick && onEditTeamClick(team)}>
+                                            <Edit className="h-4 w-4 mr-2" />
+                                            Edit Team
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDeleteTeam && onDeleteTeam(team)}>
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Delete Team
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          {totalPages > 1 && (
+                            <div className="flex flex-wrap justify-center items-center mt-4 gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={teamsPage === 1}
+                                onClick={() => setTeamsPage(teamsPage - 1)}
+                              >
+                                Previous
+                              </Button>
+                              <span className="px-2 text-sm text-muted-foreground">
+                                Page {teamsPage} of {totalPages} | Showing {paginatedTeams.length} of {filteredTeams.length} records
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={teamsPage === totalPages}
+                                onClick={() => setTeamsPage(teamsPage + 1)}
+                              >
+                                Next
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()
                   ) : (
                     <div className="text-center py-10">
                       <p className="text-muted-foreground">
@@ -1420,49 +1618,56 @@ export default function MasterHackathonDetail({
             </TabsContent>
 
             <TabsContent value="statistics" className="mt-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="border rounded-lg p-6">
-                      <h3 className="text-lg font-medium mb-4">Registration Statistics</h3>
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <span>Total Teams:</span>
-                          <Badge variant="outline">{hackathon.teams?.length || 0}</Badge>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span>Total Participants:</span>
-                          <Badge variant="outline">
-                            {hackathon.teams?.reduce(
-                              (acc, team) => acc + team.members.length, 0
-                            ) || 0}
-                          </Badge>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span>Teams with Submissions:</span>
-                          <Badge variant="outline">
-                            {hackathon.teams?.filter(team => team.submissionUrl).length || 0}
-                          </Badge>
-                        </div>
-                      </div>
+              <div className="w-full space-y-4">
+                <div className="border rounded-lg p-4 sm:p-6 w-full">
+                  <h3 className="text-lg font-medium mb-4">Registration Statistics</h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span>Total Teams:</span>
+                      <Badge variant="outline">{hackathon.teams?.length || 0}</Badge>
                     </div>
-
-                    <div className="border rounded-lg p-6">
-                      <h3 className="text-lg font-medium mb-4">Problem Statement Distribution</h3>
-                      {(Array.isArray(hackathon.problemStatements) ? hackathon.problemStatements : []).map(problem => (
-                        <div key={problem.id} className="flex justify-between items-center mb-2">
-                          <span className="truncate max-w-[70%]">{problem.code}: {problem.title}</span>
-                          <Badge variant="outline">
-                            {hackathon.teams?.filter(
-                              team => team.problemStatement?.id === problem.id
-                            ).length || 0} teams
-                          </Badge>
-                        </div>
-                      ))}
+                    <div className="flex justify-between items-center">
+                      <span>Teams Not Disqualified:</span>
+                      <Badge variant="outline">{hackathon.teams?.filter(team => !team.disqualified).length || 0}</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Total Participants:</span>
+                      <Badge variant="outline">
+                        {hackathon.teams?.reduce(
+                          (acc, team) => acc + team.members.length, 0
+                        ) || 0}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Total Participants (Non-Disqualified Teams):</span>
+                      <Badge variant="outline">
+                        {hackathon.teams?.filter(team => !team.disqualified)
+                          .reduce((acc, team) => acc + team.members.length, 0) || 0}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Teams with Submissions:</span>
+                      <Badge variant="outline">
+                        {hackathon.teams?.filter(team => team.submissionUrl).length || 0}
+                      </Badge>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+
+                <div className="border rounded-lg p-4 sm:p-6 w-full">
+                  <h3 className="text-lg font-medium mb-4">Problem Statement Distribution</h3>
+                  {(Array.isArray(hackathon.problemStatements) ? hackathon.problemStatements : []).map(problem => (
+                    <div key={problem.id} className="flex justify-between items-center mb-2">
+                      <span className="truncate max-w-[70%]">{problem.code}: {problem.title}</span>
+                      <Badge variant="outline">
+                        {hackathon.teams?.filter(
+                          team => team.problemStatement?.id === problem.id
+                        ).length || 0} teams
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </TabsContent>
 
             <TabsContent value="analytics" className="mt-4">
