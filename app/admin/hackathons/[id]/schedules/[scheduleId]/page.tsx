@@ -83,6 +83,7 @@ export default function ScheduleAttendance() {
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [processingQr, setProcessingQr] = useState(false);
+  const processingRef = useRef(false);
   const scannerRef = useRef<any>(null);
   const scannerDivId = "admin-attendance-qr-scanner";
   const params = useParams<{
@@ -194,7 +195,7 @@ export default function ScheduleAttendance() {
               );
               scanner.render(
                 (qrData: string) => {
-                  if (!processingQr) processQrCode(qrData);
+                  if (!processingRef.current) processQrCode(qrData);
                 },
                 (error: any) => {
                   console.log("QR scanning error:", error);
@@ -219,7 +220,8 @@ export default function ScheduleAttendance() {
 
   // This function is left empty as per the requirements
   const processQrCode = async (qrData: string) => {
-    if (processingQr) return;
+    if (processingRef.current) return;
+    processingRef.current = true;
     try {
       setProcessingQr(true);
 
@@ -312,8 +314,9 @@ export default function ScheduleAttendance() {
     } finally {
       // Add a small delay before allowing next scan
       setTimeout(() => {
+        processingRef.current = false;
         setProcessingQr(false);
-      }, 1000);
+      }, 3000);
     }
   };
 

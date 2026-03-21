@@ -114,6 +114,7 @@ export default function AttendanceDetails({ scheduleId }: AttendanceDetailsProps
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [processingQr, setProcessingQr] = useState(false);
+  const processingRef = useRef(false);
   const scannerRef = useRef<any>(null);
   const scannerDivId = "html5-qr-code-scanner";
   const router = useRouter();
@@ -183,7 +184,8 @@ export default function AttendanceDetails({ scheduleId }: AttendanceDetailsProps
   };
 
   const processQrCode = async (qrData: string) => {
-    if (processingQr) return;
+    if (processingRef.current) return;
+    processingRef.current = true;
 
     try {
       setProcessingQr(true);
@@ -274,8 +276,9 @@ export default function AttendanceDetails({ scheduleId }: AttendanceDetailsProps
     } finally {
       // Add a small delay before allowing next scan
       setTimeout(() => {
+        processingRef.current = false;
         setProcessingQr(false);
-      }, 1000);
+      }, 3000);
     }
   };
 
@@ -460,7 +463,7 @@ export default function AttendanceDetails({ scheduleId }: AttendanceDetailsProps
             scanner.render(
               // Success callback
               (qrMessage: string) => {
-                processQrCode(qrMessage);
+                if (!processingRef.current) processQrCode(qrMessage);
               },
               // Error callback
               (errorMessage: string) => {

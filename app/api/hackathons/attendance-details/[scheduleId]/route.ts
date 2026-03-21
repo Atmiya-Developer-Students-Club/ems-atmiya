@@ -18,13 +18,14 @@ export async function GET(
             id: true,
             name: true,
             start_date: true,
-            mode: true,            
+            mode: true,
             teams: {
               select: {
                 id: true,
                 teamName: true,
                 teamId: true,
                 leaderId: true,
+                disqualified: true,
                 members: {
                   select: {
                     id: true,
@@ -32,7 +33,7 @@ export async function GET(
                     attended: true,
                     student: {
                       select: {
-                        id: true,                        
+                        id: true,
                         user: {
                           select: {
                             id: true,
@@ -107,23 +108,29 @@ export async function GET(
         { error: "Attendance schedule not found" },
         { status: 404 }
       );
-    }    // Calculate stats
-    const totalMembers = attendanceSchedule.hackathon.teams.reduce(
+    }
+
+    // Only consider qualified (non-disqualified) teams
+    const qualifiedTeams = attendanceSchedule.hackathon.teams.filter(team => !team.disqualified);
+
+    const totalMembers = qualifiedTeams.reduce(
       (count, team) => count + team.members.length,
       0
     );
 
+    // Only count present for qualified team members
+    const qualifiedMemberIds = new Set(qualifiedTeams.flatMap(team => team.members.map(m => m.id)));
     const presentCount = attendanceSchedule.attendanceRecords.filter(
-      (record) => record.isPresent
+      (record) => record.isPresent && qualifiedMemberIds.has(record.teamMemberId)
     ).length;
 
     const attendancePercentage = totalMembers > 0
       ? Math.round((presentCount / totalMembers) * 100)
       : 0;
 
-    // Calculate team stats
-    const totalTeams = attendanceSchedule.hackathon.teams.length;
-    const presentTeams = attendanceSchedule.hackathon.teams.filter(team => {
+    // Calculate team stats for qualified teams
+    const totalTeams = qualifiedTeams.length;
+    const presentTeams = qualifiedTeams.filter(team => {
       return team.members.some(member => {
         return member.attendanceRecords.some(record => record.isPresent);
       });
@@ -134,14 +141,23 @@ export async function GET(
       presentCount,
       absentCount: totalMembers - presentCount,
       attendancePercentage,
-      totalTeams, 
+      totalTeams,
       presentTeams,
       absentTeams: totalTeams - presentTeams,
     };
 
+    // Return only qualified teams in the response
+    const attendanceScheduleFiltered = {
+      ...attendanceSchedule,
+      hackathon: {
+        ...attendanceSchedule.hackathon,
+        teams: qualifiedTeams,
+      },
+    };
+
     return NextResponse.json({
       success: true,
-      attendanceSchedule,
+      attendanceSchedule: attendanceScheduleFiltered,
       stats,
     });
   } catch (error) {
