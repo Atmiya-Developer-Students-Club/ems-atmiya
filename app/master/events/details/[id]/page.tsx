@@ -124,6 +124,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const [isScanning, setIsScanning] = useState(false);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [processingQr, setProcessingQr] = useState(false);
+  const processingRef = useRef(false);
   const scannerRef = useRef<any>(null);
   const scannerDivId = "html5-qr-code-scanner";
 
@@ -198,7 +199,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
             scanner.render(
               (qrData: string) => {
                 // Success callback
-                if (!processingQr) {
+                if (!processingRef.current) {
                   processQrCode(qrData);
                 }
               },
@@ -241,7 +242,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   };
 
   const processQrCode = async (qrData: string) => {
-    if (processingQr) return;
+    if (processingRef.current) return;
+    processingRef.current = true;
 
     try {
       setProcessingQr(true);
@@ -306,8 +308,9 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     } finally {
       // Add a small delay before allowing next scan
       setTimeout(() => {
+        processingRef.current = false;
         setProcessingQr(false);
-      }, 1000);
+      }, 3000);
     }
   };
 

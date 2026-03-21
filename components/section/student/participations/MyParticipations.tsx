@@ -50,6 +50,7 @@ export function MyParticipations({
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [processingQr, setProcessingQr] = useState(false);
+  const processingRef = useRef(false);
   const scannerRef = useRef<any>(null);
   const scannerDivId = "student-qr-code-scanner";
 
@@ -102,7 +103,7 @@ export function MyParticipations({
               );
               scanner.render(
                 (qrData: string) => {
-                  if (!processingQr) processQrCode(qrData);
+                  if (!processingRef.current) processQrCode(qrData);
                 },
                 (error: any) => {
                   console.log("QR scanning error:", error);
@@ -125,48 +126,44 @@ export function MyParticipations({
     };
   }, [qrScannerOpen]);
 
-  // Placeholder for QR code processing
   const processQrCode = async (qrData: string) => {
-    if (processingQr) return;
+    if (processingRef.current) return;
+    processingRef.current = true;
     setProcessingQr(true);
 
-    // Expect qrData to be a URL string like "http://localhost:3000/hackathons/random-uuid"
-    const data: { id?: string } = {};
+    // Expect qrData to be a JSON string like { type: "hackathon-attendance", hackathonId, scheduleId }
+    let scheduleId: string | undefined;
     try {
-      // Try to extract hackathon id from the URL
-      const url = new URL(qrData);
-      const paths = url.pathname.split("/");
-      // Find the hackathon id (assumes last segment is the id)
-      const hackathonId = paths[paths.length - 1];
-      if (hackathonId && hackathonId !== "hackathons") {
-        data.id = hackathonId;
+      const parsed = JSON.parse(qrData.trim());
+      if (parsed.type === "hackathon-attendance" && parsed.scheduleId) {
+        scheduleId = parsed.scheduleId;
       }
-    } catch (error) {
-      // If qrData is not a valid URL, treat as invalid
-      console.error("Error parsing QR code data:", error);
-      toast.error("Invalid QR code format");
-      setProcessingQr(false);
+    } catch {
+      // Not JSON — invalid QR
+    }
+
+    if (!scheduleId) {
+      toast.error("Invalid QR code — no schedule found");
+      setTimeout(() => { processingRef.current = false; setProcessingQr(false); }, 3000);
       return;
     }
 
-    if (!data || !data.id) {
-      toast.error("Invalid QR code format");
-      setProcessingQr(false);
+    if (!selectedParticipation?.team.id) {
+      toast.error("No team selected");
+      setTimeout(() => { processingRef.current = false; setProcessingQr(false); }, 3000);
       return;
     }
 
     try {
-      const res = await axios.post("/api/hackathons/attendance", {
-        id: studentId,
-        teamId: selectedParticipation?.team.id,
-        hackathonId: data.id,
+      const res = await axios.post("/api/hackathons/attendance-single", {
+        sheduleId: scheduleId,
+        studentId: studentId,
+        teamId: selectedParticipation.team.id,
       });
 
       if (!res.data.success) {
-        console.error("Error marking attendance:", res.data.error);
-        toast.error(res.data.error);
-        setProcessingQr(false);
-        return;
+        console.error("Error marking attendance:", res.data.message);
+        toast.error(res.data.message);
       } else {
         // Show success animation overlay before toast
         const successOverlay = document.createElement("div");
@@ -188,17 +185,15 @@ export function MyParticipations({
           setTimeout(() => {
             document.body.removeChild(successOverlay);
             toast.success("Attendance marked successfully");
-            setProcessingQr(false);
             window.location.reload();
           }, 300);
         }, 1000);
-        return;
       }
     } catch (error) {
       console.error("Error marking attendance:", error);
       toast.error("Failed to mark attendance");
-      setProcessingQr(false);
-      return;
+    } finally {
+      setTimeout(() => { processingRef.current = false; setProcessingQr(false); }, 3000);
     }
   };
 

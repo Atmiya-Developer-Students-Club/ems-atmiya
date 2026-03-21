@@ -190,10 +190,14 @@ export default function MasterHackathonDetail({
   const [mentorSearch, setMentorSearch] = useState("");
   const [problemStatementFilter, setProblemStatementFilter] = useState("ALL");
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
-  const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [processingQr, setProcessingQr] = useState(false);
+  const processingRef = useRef(false);
+  const [selectedScanScheduleId, setSelectedScanScheduleId] = useState<string | null>(null);
+  const [selectedQrScheduleId, setSelectedQrScheduleId] = useState<string | null>(null);
+  const [generatedQrBase64, setGeneratedQrBase64] = useState<string | null>(null);
+  const [generatingQr, setGeneratingQr] = useState(false);
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
@@ -381,43 +385,6 @@ export default function MasterHackathonDetail({
     }
   };
 
-  const handleDownloadHackathonQR = async () => {
-    try {
-      let qrCodeBase64 = hackathon.qrCode;
-
-      // If QR code doesn't exist, generate it
-      if (!qrCodeBase64) {
-        toast.loading("Generating QR code...");
-
-        const response = await fetch(`/api/hackathons/${hackathon.id}/qr-code`, {
-          method: 'POST',
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to generate QR code');
-        }
-
-        const data = await response.json();
-        qrCodeBase64 = data.qrCode;
-        toast.dismiss();
-      }
-
-      // Create a downloadable link for the QR code
-      const link = document.createElement('a');
-      link.href = `data:image/png;base64,${qrCodeBase64}`;
-      link.download = `${hackathon.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_qr_code.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast.success("QR code downloaded successfully");
-    } catch (error) {
-      console.error("Error downloading QR code:", error);
-      toast.dismiss();
-      toast.error("Failed to download QR code");
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "UPCOMING":
@@ -501,7 +468,10 @@ export default function MasterHackathonDetail({
 
   // QR scanner functions
   const startQrScanner = () => {
-    setQrScannerOpen(true);
+    if (!selectedScanScheduleId) {
+      toast.error("Please select an attendance schedule first");
+      return;
+    }
     setIsScanning(true);
   };
 
@@ -513,13 +483,14 @@ export default function MasterHackathonDetail({
 
     setIsScanning(false);
     setQrScannerOpen(false);
+    setSelectedScanScheduleId(null);
   };
 
-  // Initialize QR scanner when dialog opens
+  // Initialize QR scanner when scanning starts (after schedule is selected)
   useEffect(() => {
     let styleEl: HTMLStyleElement | null = null;
 
-    if (qrScannerOpen && !scannerRef.current) {
+    if (isScanning && !scannerRef.current) {
       // Add custom styles for the QR scanner
       styleEl = document.createElement('style');
       styleEl.innerHTML = qrScannerStyles;
@@ -544,7 +515,7 @@ export default function MasterHackathonDetail({
             scanner.render(
               // Success callback
               (qrMessage: string) => {
-                processQrCode(qrMessage);
+                if (!processingRef.current) processQrCode(qrMessage);
               },
               // Error callback
               (errorMessage: string) => {
@@ -573,15 +544,16 @@ export default function MasterHackathonDetail({
         styleEl.remove();
       }
     };
-  }, [qrScannerOpen]);
+  }, [isScanning]);
 
   const processQrCode = async (qrData: string) => {
-    if (processingQr) return;
+    if (processingRef.current) return;
+    processingRef.current = true;
 
     try {
       setProcessingQr(true);
 
-      // Parse the QR code data (assuming it contains a user ID)
+      // Parse the QR code data
       let userId;
       let teamId;
       try {
@@ -589,7 +561,6 @@ export default function MasterHackathonDetail({
         userId = userData.userId;
         teamId = userData.teamId;
       } catch (error) {
-        // If not JSON, try using the raw data as userId
         userId = qrData.trim();
       }
 
@@ -603,19 +574,23 @@ export default function MasterHackathonDetail({
         return;
       }
 
-      // Call the attendance API
-      const response = await fetch(`/api/hackathons/attendance`, {
+      if (!selectedScanScheduleId) {
+        toast.error("No attendance schedule selected");
+        return;
+      }
+
+      // Call the schedule-aware attendance API
+      const response = await fetch(`/api/hackathons/attendance-single`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id: userId, hackathonId: hackathon.id, teamId }),
+        body: JSON.stringify({ sheduleId: selectedScanScheduleId, studentId: userId, teamId }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        // Show success animation overlay before toast
         const successOverlay = document.createElement('div');
         successOverlay.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black/50 backdrop-blur-sm';
         successOverlay.innerHTML = `
@@ -631,7 +606,6 @@ export default function MasterHackathonDetail({
         `;
         document.body.appendChild(successOverlay);
 
-        // Remove after animation
         setTimeout(() => {
           successOverlay.classList.add('animate-out', 'fade-out');
           setTimeout(() => {
@@ -639,27 +613,50 @@ export default function MasterHackathonDetail({
           }, 300);
         }, 1500);
 
-        // Refresh the page to update the attendance status
         setTimeout(() => {
           router.refresh();
         }, 2000);
       } else {
-        toast.error(data.error || "Failed to mark attendance");
+        toast.error(data.message || data.error || "Failed to mark attendance");
       }
     } catch (error) {
       console.error("Error processing QR code:", error);
       toast.error("An error occurred while processing the QR code");
     } finally {
-      // Add a small delay before allowing next scan
       setTimeout(() => {
+        processingRef.current = false;
         setProcessingQr(false);
-      }, 1000);
+      }, 3000);
     }
   };
 
   const handleOpenQrDialog = () => {
-    setQrCodeData(hackathon.qrCodeData || null);
+    setSelectedQrScheduleId(null);
+    setGeneratedQrBase64(null);
     setQrDialogOpen(true);
+  };
+
+  const handleGenerateScheduleQr = async () => {
+    if (!selectedQrScheduleId) {
+      toast.error("Please select an attendance schedule");
+      return;
+    }
+    setGeneratingQr(true);
+    try {
+      const QRCodeLib = (await import('qrcode')).default;
+      const payload = JSON.stringify({
+        type: "hackathon-attendance",
+        hackathonId: hackathon.id,
+        scheduleId: selectedQrScheduleId,
+      });
+      const dataUrl = await QRCodeLib.toDataURL(payload, { width: 300, margin: 1 });
+      setGeneratedQrBase64(dataUrl);
+    } catch (error) {
+      console.error("Error generating schedule QR:", error);
+      toast.error("Failed to generate QR code");
+    } finally {
+      setGeneratingQr(false);
+    }
   };
 
 
@@ -991,14 +988,14 @@ export default function MasterHackathonDetail({
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
         <h1 className="text-2xl sm:text-3xl font-bold break-words">{hackathon.name}</h1>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <Button variant={isScanning ? "destructive" : "outline"} onClick={isScanning ? stopQrScanner : startQrScanner} className="w-full sm:w-auto">
+          <Button variant={isScanning ? "destructive" : "outline"} onClick={isScanning ? stopQrScanner : () => setQrScannerOpen(true)} className="w-full sm:w-auto">
             <QrCode className="mr-2 h-4 w-4" />
             {isScanning ? "Stop Scanner" : "Scan Attendance"}
           </Button>
           <Button variant="outline" onClick={editHackathon} className="w-full sm:w-auto">
             <Edit className="mr-2 h-4 w-4" />
             Edit Hackathon
-          </Button>          <Button variant="outline" onClick={handleDownloadHackathonQR} className="w-full sm:w-auto">
+          </Button>          <Button variant="outline" onClick={handleOpenQrDialog} className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" />
             Download QR
           </Button>
@@ -1495,13 +1492,16 @@ export default function MasterHackathonDetail({
                                   new Date(a.checkInTime).getTime() - new Date(b.checkInTime).getTime()
                                 )
                                 .map((schedule) => {
-                                  // Calculate attendance percentage if records exist
-                                  const totalMembers = hackathon.teams.reduce(
+                                  // Only consider qualified (non-disqualified) teams for attendance
+                                  const qualifiedTeams = hackathon.teams.filter(team => !team.disqualified);
+                                  const totalMembers = qualifiedTeams.reduce(
                                     (count, team) => count + (team.members?.length || 0),
                                     0
                                   );
+                                  // Only count attendance for members of qualified teams
+                                  const qualifiedMemberIds = new Set(qualifiedTeams.flatMap(team => team.members.map(m => m.id)));
                                   const attendedCount = schedule.attendanceRecords?.filter(
-                                    record => record.isPresent
+                                    record => record.isPresent && qualifiedMemberIds.has(record.teamMemberId)
                                   ).length || 0;
                                   const attendancePercentage = totalMembers > 0
                                     ? Math.round((attendedCount / totalMembers) * 100)
@@ -1520,7 +1520,7 @@ export default function MasterHackathonDetail({
                                             <span className="text-xs font-medium">{attendancePercentage}%</span>
                                           </div>
                                           <p className="text-xs text-muted-foreground">
-                                            {attendedCount} / {totalMembers} members checked in
+                                            {attendedCount} / {totalMembers} qualified members checked in
                                           </p>
                                         </div>
                                       </TableCell>
@@ -2257,7 +2257,7 @@ export default function MasterHackathonDetail({
                   <Award className="mr-2 h-4 w-4" />
                   Manage Winners
                 </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={handleDownloadHackathonQR}>
+                <Button variant="outline" className="w-full justify-start" onClick={handleOpenQrDialog}>
                   <Download className="mr-2 h-4 w-4" />
                   Download QR Code
                 </Button>
@@ -2371,12 +2371,12 @@ export default function MasterHackathonDetail({
         </div>
       </div>
 
-      {/* QR Code Dialog */}
+      {/* QR Code Dialog — Schedule-specific QR for participants to scan */}
       <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
         <DialogContent className="sm:max-w-[425px] p-6">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold">
-              Hackathon QR Code
+              Attendance QR Code
             </DialogTitle>
             <DialogClose asChild>
               <Button variant="ghost" className="absolute top-4 right-4">
@@ -2386,46 +2386,70 @@ export default function MasterHackathonDetail({
               </Button>
             </DialogClose>
           </DialogHeader>
-          <div className="flex justify-center mb-4">
-            {qrCodeData ? (
-              <img
-                src={`data:image/png;base64,${qrCodeData}`}
-                alt="QR Code"
-                className="w-full h-auto rounded-md"
-              />
-            ) : (
-              <p className="text-center text-muted-foreground">
-                No QR code available
-              </p>
-            )}
+
+          {/* Schedule selector */}
+          <div className="mb-4">
+            <label className="text-sm font-medium mb-1 block">Select Attendance Schedule</label>
+            <Select value={selectedQrScheduleId || ""} onValueChange={(val) => { setSelectedQrScheduleId(val); setGeneratedQrBase64(null); }}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a schedule..." />
+              </SelectTrigger>
+              <SelectContent>
+                {hackathon.attendanceSchedules.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    Day {s.day} — {format(new Date(s.checkInTime), "h:mm a")}{s.description ? ` (${s.description})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="flex justify-center gap-2">
-            <Button
-              variant="outline"
-              onClick={handleDownloadHackathonQR}
-              disabled={!hackathon.qrCode}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Download QR Code
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => {
-                if (qrCodeData) {
-                  const link = document.createElement('a');
-                  link.href = `data:image/png;base64,${qrCodeData}`;
-                  link.download = `${hackathon.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_qr_code.png`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  toast.success("QR code downloaded successfully");
-                }
-              }}
-            >
-              <QrCode className="mr-2 h-4 w-4" />
-              Scan QR Code
-            </Button>
-          </div>
+
+          {!selectedQrScheduleId && (
+            <p className="text-center text-sm text-muted-foreground">Select a schedule to generate a QR code for participants to scan.</p>
+          )}
+
+          {selectedQrScheduleId && !generatedQrBase64 && (
+            <div className="flex justify-center">
+              <Button onClick={handleGenerateScheduleQr} disabled={generatingQr}>
+                {generatingQr ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</>
+                ) : (
+                  <><QrCode className="mr-2 h-4 w-4" /> Generate QR Code</>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {generatedQrBase64 && (
+            <>
+              <div className="flex justify-center mb-4">
+                <img
+                  src={generatedQrBase64}
+                  alt="Attendance QR Code"
+                  className="w-full h-auto max-w-[300px] rounded-md"
+                />
+              </div>
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const selectedSchedule = hackathon.attendanceSchedules?.find((s: any) => s.id === selectedQrScheduleId);
+                    const scheduleName = selectedSchedule ? `day${selectedSchedule.day}` : 'schedule';
+                    const link = document.createElement('a');
+                    link.href = generatedQrBase64!;
+                    link.download = `${hackathon.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${scheduleName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_qr.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    toast.success("QR code downloaded");
+                  }}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download QR Code
+                </Button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -2439,26 +2463,60 @@ export default function MasterHackathonDetail({
             <DialogHeader className="space-y-2">
               <DialogTitle>Scan Hackathon Attendance QR Code</DialogTitle>
               <p className="text-sm text-muted-foreground">
-                Scan a participant&apos;s QR code to mark their attendance for this hackathon.
+                {isScanning
+                  ? "Scan a participant\u2019s QR code to mark their attendance."
+                  : "Select an attendance schedule, then start scanning."}
               </p>
             </DialogHeader>
-            <div className="flex flex-col items-center mt-4">
-              <div className="qr-scanner-container border rounded-md overflow-hidden">
-                <div id={scannerDivId}></div>
+
+            {/* Schedule selector — always visible */}
+            <div className="mb-2">
+              <label className="text-sm font-medium mb-1 block">Attendance Schedule</label>
+              <Select
+                value={selectedScanScheduleId || ""}
+                onValueChange={(val) => setSelectedScanScheduleId(val)}
+                disabled={isScanning}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a schedule..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {hackathon.attendanceSchedules.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      Day {s.day} — {format(new Date(s.checkInTime), "h:mm a")}{s.description ? ` (${s.description})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Scanner area — only when scanning */}
+            {isScanning ? (
+              <div className="flex flex-col items-center mt-2">
+                <div className="qr-scanner-container border rounded-md overflow-hidden">
+                  <div id={scannerDivId}></div>
+                </div>
+                <div className="mt-4 w-full">
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    onClick={stopQrScanner}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Stop Scanning
+                  </Button>
+                </div>
               </div>
-              <div className="mt-4 w-full">
-                <Button
-                  variant="destructive"
-                  className="w-full"
-                  onClick={stopQrScanner}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  Stop Scanning
+            ) : (
+              <div className="flex justify-center mt-2">
+                <Button onClick={startQrScanner} disabled={!selectedScanScheduleId} className="w-full">
+                  <QrCode className="mr-2 h-4 w-4" />
+                  Start Scanner
                 </Button>
               </div>
-            </div>
+            )}
           </DialogContent>
         </Dialog>
       )}
