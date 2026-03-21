@@ -243,7 +243,7 @@ async function addMembersToExistingTeam() {
 
   // 5. Add members + generate QR codes
   try {
-    const memberStudents = [];
+    const memberStudents: NonNullable<Awaited<ReturnType<typeof findStudentByEmail>>>[] = [];
     for (const email of memberEmails) {
       const data = await findStudentByEmail(email);
       if (data) memberStudents.push(data);
@@ -432,7 +432,7 @@ async function createNewTeam() {
     const newTeamId = await generateNextTeamId(hackathon.id);
 
     // Resolve all member student records
-    const memberStudents = [];
+    const memberStudents: NonNullable<Awaited<ReturnType<typeof findStudentByEmail>>>[] = [];
     for (const email of memberEmails) {
       const data = await findStudentByEmail(email);
       if (data) memberStudents.push(data);
